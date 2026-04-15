@@ -85,25 +85,49 @@ class HealthTracker {
     }
 
     // Food Entry
-    addFood() {
+    async addFood() {
         const input = document.getElementById('foodInput');
         const text = input.value.trim();
 
         if (!text) return;
 
         const parsed = this.parseFood(text);
+
+        // Search external database first
+        const searchResults = await this.searchFoodDatabase(parsed.name);
+
+        if (searchResults && searchResults.length > 1) {
+            // Show selection modal if multiple results
+            this.showFoodSelectionModal(searchResults, parsed.quantity, parsed.unit, text);
+        } else if (searchResults && searchResults.length === 1) {
+            // Use the single result
+            this.addFoodEntry(searchResults[0], parsed.quantity, parsed.unit, text);
+        } else {
+            // Fallback to local database
+            const nutrition = this.getNutrition(parsed.name, parsed.quantity, parsed.unit);
+            this.addFoodEntry({
+                foodName: parsed.name,
+                dbFoodName: nutrition.dbFoodName,
+                ...nutrition
+            }, parsed.quantity, parsed.unit, text);
+        }
+
+        input.value = '';
+    }
+
+    addFoodEntry(foodData, quantity, unit, rawInput) {
         const entry = {
             id: Date.now(),
             date: this.currentDate,
-            rawInput: text,
-            foodName: parsed.name,
-            dbFoodName: parsed.dbFoodName,
-            quantity: parsed.quantity,
-            unit: parsed.unit,
-            calories: parsed.calories,
-            protein: parsed.protein,
-            carbs: parsed.carbs,
-            fat: parsed.fat,
+            rawInput: rawInput,
+            foodName: foodData.foodName || foodData.dbFoodName,
+            dbFoodName: foodData.dbFoodName,
+            quantity: quantity,
+            unit: unit,
+            calories: foodData.calories,
+            protein: foodData.protein,
+            carbs: foodData.carbs,
+            fat: foodData.fat,
             timestamp: new Date().toISOString()
         };
 
@@ -114,7 +138,6 @@ class HealthTracker {
         this.data.foodEntries[this.currentDate].push(entry);
 
         this.saveData();
-        input.value = '';
         this.renderTodayView();
     }
 
@@ -154,6 +177,119 @@ class HealthTracker {
             unit,
             ...nutrition
         };
+    }
+
+    async searchFoodDatabase(foodName) {
+        try {
+            // Use USDA FoodData Central API
+            const apiKey = 'DEMO_KEY'; // Free demo key, limited to 30 requests/hour
+            const query = encodeURIComponent(foodName);
+            const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${query}&pageSize=5&api_key=${apiKey}`;
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                console.warn('API request failed, falling back to local database');
+                return null;
+            }
+
+            const data = await response.json();
+
+            if (!data.foods || data.foods.length === 0) {
+                return null;
+            }
+
+            // Parse and return results
+            return data.foods.map(food => {
+                const nutrients = {};
+                food.foodNutrients.forEach(nutrient => {
+                    const name = nutrient.nutrientName.toLowerCase();
+                    if (name.includes('energy') || name.includes('calorie')) {
+                        nutrients.calories = nutrient.value;
+                    } else if (name.includes('protein')) {
+                        nutrients.protein = nutrient.value;
+                    } else if (name.includes('carbohydrate')) {
+                        nutrients.carbs = nutrient.value;
+                    } else if (name.includes('total lipid') || name.includes('fat')) {
+                        nutrients.fat = nutrient.value;
+                    }
+                });
+
+                return {
+                    foodName: food.description,
+                    dbFoodName: food.description,
+                    brandName: food.brandName || food.brandOwner || '',
+                    calories: nutrients.calories || 0,
+                    protein: nutrients.protein || 0,
+                    carbs: nutrients.carbs || 0,
+                    fat: nutrients.fat || 0,
+                    servingSize: food.servingSize || 100,
+                    servingUnit: food.servingSizeUnit || 'g'
+                };
+            });
+        } catch (error) {
+            console.warn('Error searching food database:', error);
+            return null;
+        }
+    }
+
+    showFoodSelectionModal(results, quantity, unit, rawInput) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content food-search-modal">
+                <h3>Select Food</h3>
+                <p class="search-query">Search: "${rawInput}"</p>
+                <div class="food-results">
+                    ${results.map((food, index) => `
+                        <div class="food-result-item" onclick="app.selectFood(${index}, ${quantity}, '${unit}', '${rawInput.replace(/'/g, "\\'")}')">
+                            <div class="result-name">${food.foodName}</div>
+                            ${food.brandName ? `<div class="result-brand">${food.brandName}</div>` : ''}
+                            <div class="result-nutrition">
+                                ${Math.round(food.calories)} cal •
+                                P: ${Math.round(food.protein)}g •
+                                C: ${Math.round(food.carbs)}g •
+                                F: ${Math.round(food.fat)}g
+                                (per ${food.servingSize}${food.servingUnit})
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <button class="btn-cancel" onclick="app.closeModal()">Cancel</button>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Store results temporarily for selection
+        this.tempSearchResults = results;
+    }
+
+    selectFood(index, quantity, unit, rawInput) {
+        const food = this.tempSearchResults[index];
+
+        // Calculate nutrition based on quantity
+        const servingSize = food.servingSize || 100;
+        let multiplier = 1;
+
+        if (unit === 'g') {
+            multiplier = quantity / servingSize;
+        } else if (unit === 'count') {
+            // Assume count is serving size
+            multiplier = quantity;
+        }
+
+        const nutritionData = {
+            foodName: food.foodName,
+            dbFoodName: food.foodName,
+            calories: Math.round(food.calories * multiplier),
+            protein: Math.round(food.protein * multiplier * 10) / 10,
+            carbs: Math.round(food.carbs * multiplier * 10) / 10,
+            fat: Math.round(food.fat * multiplier * 10) / 10
+        };
+
+        this.addFoodEntry(nutritionData, quantity, unit, rawInput);
+        this.closeModal();
+        delete this.tempSearchResults;
     }
 
     getNutrition(foodName, quantity, unit) {

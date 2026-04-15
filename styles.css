@@ -578,3 +578,59 @@ canvas {
 .btn-save:active {
     opacity: 0.7;
 }
+
+/* Food Search Modal */
+.food-search-modal {
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.search-query {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.food-results {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 16px;
+    max-height: 50vh;
+}
+
+.food-result-item {
+    padding: 16px;
+    background: var(--background);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.food-result-item:hover {
+    background: var(--border-color);
+}
+
+.food-result-item:active {
+    opacity: 0.7;
+}
+
+.result-name {
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 16px;
+}
+
+.result-brand {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.result-nutrition {
+    font-size: 13px;
+    color: var(--text-secondary);
+}

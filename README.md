@@ -5,8 +5,12 @@ A lightweight, privacy-focused health tracking web app optimized for iPhone. Tra
 ## Features
 
 - **Quick Food Entry**: Type "chicken breast 220g" and hit enter - that's it!
-- **Automatic Calorie Calculation**: Built-in food database with common foods
+- **External Food Database**: Searches USDA FoodData Central with 300,000+ foods
+- **Smart Food Matching**: Shows multiple options when there are similar foods
+- **Automatic Calorie Calculation**: Accurate nutrition data from comprehensive database
+- **Offline Fallback**: Built-in food database for when API is unavailable
 - **Macro Tracking**: Track protein, carbs, and fat
+- **Edit Food Entries**: Modify calories and macros for any logged food
 - **Weight Tracking**: Log your daily weight
 - **Goal Setting**: Set daily calorie and macro goals
 - **Trends & Analytics**: View your progress over time
@@ -88,7 +92,23 @@ Just type naturally in the food input box:
 - `rice 150g`
 - `protein shake`
 
-The app will automatically calculate calories and macros based on its built-in food database.
+The app will:
+1. Search the USDA food database for matches
+2. If multiple foods match, show you options to choose from
+3. Calculate calories and macros based on your quantity
+4. Fall back to the built-in database if the API is unavailable
+
+### Getting a Personal API Key (Optional but Recommended)
+
+The app uses a demo API key limited to 30 requests/hour. For unlimited use:
+
+1. Go to https://fdc.nal.usda.gov/api-key-signup.html
+2. Sign up for a free API key (no credit card required)
+3. Open `app.js` and replace `'DEMO_KEY'` on line 185 with your key:
+   ```javascript
+   const apiKey = 'YOUR_API_KEY_HERE';
+   ```
+4. Your personal key gives you 1000 requests/hour for free
 
 ### Logging Weight
 
@@ -114,16 +134,14 @@ Use the arrow buttons (‹ ›) next to the date to view previous or future days
 
 ## Supported Foods
 
-The app includes a built-in database of common foods:
+The app searches the **USDA FoodData Central database** with over 300,000 foods including:
 
-**Proteins**: chicken, salmon, tuna, eggs, steak, turkey, etc.
-**Carbs**: rice, pasta, bread, oats, quinoa, potato, etc.
-**Fruits**: banana, apple, orange, berries, etc.
-**Vegetables**: broccoli, spinach, carrots, tomato, etc.
-**Fats/Nuts**: almonds, peanut butter, avocado, olive oil, etc.
-**Dairy**: milk, cheese, greek yogurt, etc.
+**All Categories**: Meats, seafood, dairy, vegetables, fruits, grains, snacks, beverages, and more
+**Branded Foods**: Thousands of packaged foods with accurate nutrition labels
+**Restaurant Foods**: Common chain restaurant items
+**Generic Foods**: Standard USDA entries for basic ingredients
 
-The database will be expanded in future updates. For now, unlisted foods will use estimated values.
+If a food isn't found in the external database, the app falls back to a built-in database with common foods for offline support.
 
 ## Data Privacy
 
