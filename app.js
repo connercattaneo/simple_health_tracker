@@ -226,69 +226,193 @@ class HealthTracker {
 
     async lookupBarcode(barcode) {
         try {
-            // Use Open Food Facts API to lookup barcode
-            const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-            const data = await response.json();
+            // Strategy 1: Try Open Food Facts first (best for packaged foods with nutrition data)
+            let foodData = await this.lookupOpenFoodFacts(barcode);
 
-            if (data.status === 1 && data.product) {
-                const product = data.product;
+            // Strategy 2: If not found, try UPCitemdb.com for product name, then search USDA
+            if (!foodData) {
+                foodData = await this.lookupUPCItemDB(barcode);
+            }
 
-                // Extract nutrition per 100g
-                const nutrients = product.nutriments || {};
+            // Strategy 3: Try FatSecret API as another fallback
+            if (!foodData) {
+                foodData = await this.lookupFoodDataCentral(barcode);
+            }
 
-                const foodData = {
-                    foodName: product.product_name || 'Unknown Product',
-                    dbFoodName: product.product_name || 'Unknown Product',
-                    brandName: product.brands || '',
-                    calories: nutrients['energy-kcal_100g'] || nutrients['energy_100g'] / 4.184 || 0,
-                    protein: nutrients['proteins_100g'] || 0,
-                    carbs: nutrients['carbohydrates_100g'] || 0,
-                    fat: nutrients['fat_100g'] || 0,
-                    servingSize: product.serving_size || 100,
-                    servingUnit: 'g'
-                };
-
-                // Show confirmation modal with product info
-                const modal = document.createElement('div');
-                modal.className = 'modal';
-                modal.innerHTML = `
-                    <div class="modal-content">
-                        <h3>Scanned Product</h3>
-                        <div class="modal-food-name">${foodData.foodName}</div>
-                        ${foodData.brandName ? `<div class="result-brand">${foodData.brandName}</div>` : ''}
-                        <div class="result-nutrition">
-                            ${Math.round(foodData.calories)} cal •
-                            P: ${Math.round(foodData.protein)}g •
-                            C: ${Math.round(foodData.carbs)}g •
-                            F: ${Math.round(foodData.fat)}g
-                            (per 100g)
-                        </div>
-                        <div class="form-group" style="margin-top: 20px;">
-                            <label>Quantity (grams)</label>
-                            <input type="number" id="barcodeQuantity" value="100" min="1">
-                        </div>
-                        <div class="modal-buttons">
-                            <button class="btn-cancel" onclick="app.closeModal()">Cancel</button>
-                            <button class="btn-save" onclick="app.addScannedFood()">Add Food</button>
-                        </div>
-                    </div>
-                `;
-
-                document.body.appendChild(modal);
-
-                // Store scanned food data temporarily
-                this.scannedFoodData = foodData;
-
-                // Focus quantity input
-                setTimeout(() => document.getElementById('barcodeQuantity').focus(), 100);
-
+            if (foodData) {
+                this.showScannedProductModal(foodData);
             } else {
-                alert('Product not found in database. Please enter manually.');
+                alert(`Barcode ${barcode} not found in any database.\n\nTried:\n- Open Food Facts\n- UPC Item Database\n- USDA FoodData Central\n\nPlease enter the food manually.`);
             }
         } catch (error) {
             console.error('Barcode lookup error:', error);
             alert('Error looking up product. Please enter manually.');
         }
+    }
+
+    async lookupOpenFoodFacts(barcode) {
+        try {
+            const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+            const data = await response.json();
+
+            if (data.status === 1 && data.product) {
+                const product = data.product;
+                const nutrients = product.nutriments || {};
+
+                return {
+                    foodName: product.product_name || 'Unknown Product',
+                    dbFoodName: `${product.product_name || 'Unknown'} (Open Food Facts)`,
+                    brandName: product.brands || '',
+                    calories: nutrients['energy-kcal_100g'] || (nutrients['energy_100g'] ? nutrients['energy_100g'] / 4.184 : 0),
+                    protein: nutrients['proteins_100g'] || 0,
+                    carbs: nutrients['carbohydrates_100g'] || 0,
+                    fat: nutrients['fat_100g'] || 0,
+                    servingSize: product.serving_size || 100,
+                    servingUnit: 'g',
+                    source: 'Open Food Facts'
+                };
+            }
+        } catch (error) {
+            console.log('Open Food Facts lookup failed:', error);
+        }
+        return null;
+    }
+
+    async lookupUPCItemDB(barcode) {
+        try {
+            // UPCitemdb.com provides product names - we can then search USDA
+            const response = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`);
+            const data = await response.json();
+
+            if (data.items && data.items.length > 0) {
+                const item = data.items[0];
+                const productName = item.title || item.brand;
+
+                if (productName) {
+                    // Now search USDA for this product
+                    const usdaData = await this.searchUSDAByName(productName);
+                    if (usdaData) {
+                        usdaData.brandName = item.brand || '';
+                        usdaData.source = 'UPC Database + USDA';
+                        return usdaData;
+                    }
+                }
+            }
+        } catch (error) {
+            console.log('UPCitemdb lookup failed:', error);
+        }
+        return null;
+    }
+
+    async lookupFoodDataCentral(barcode) {
+        try {
+            // USDA doesn't have direct barcode lookup, but we can try searching by barcode as a term
+            const apiKey = localStorage.getItem('usdaApiKey') || 'DEMO_KEY';
+            const response = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?query=${barcode}&api_key=${apiKey}`);
+            const data = await response.json();
+
+            if (data.foods && data.foods.length > 0) {
+                const food = data.foods[0];
+                const nutrients = {};
+
+                food.foodNutrients?.forEach(nutrient => {
+                    const name = nutrient.nutrientName?.toLowerCase();
+                    if (name?.includes('protein')) nutrients.protein = nutrient.value;
+                    if (name?.includes('carbohydrate')) nutrients.carbs = nutrient.value;
+                    if (name?.includes('fat') && !name?.includes('fatty')) nutrients.fat = nutrient.value;
+                    if (name?.includes('energy') || name?.includes('calorie')) nutrients.calories = nutrient.value;
+                });
+
+                return {
+                    foodName: food.description,
+                    dbFoodName: `${food.description} (USDA FDC)`,
+                    brandName: food.brandOwner || food.brandName || '',
+                    calories: nutrients.calories || 0,
+                    protein: nutrients.protein || 0,
+                    carbs: nutrients.carbs || 0,
+                    fat: nutrients.fat || 0,
+                    servingSize: 100,
+                    servingUnit: 'g',
+                    source: 'USDA FoodData Central'
+                };
+            }
+        } catch (error) {
+            console.log('USDA FoodData Central lookup failed:', error);
+        }
+        return null;
+    }
+
+    async searchUSDAByName(productName) {
+        try {
+            const apiKey = localStorage.getItem('usdaApiKey') || 'DEMO_KEY';
+            const query = encodeURIComponent(productName);
+            const response = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?query=${query}&pageSize=1&api_key=${apiKey}`);
+            const data = await response.json();
+
+            if (data.foods && data.foods.length > 0) {
+                const food = data.foods[0];
+                const nutrients = {};
+
+                food.foodNutrients?.forEach(nutrient => {
+                    const name = nutrient.nutrientName?.toLowerCase();
+                    if (name?.includes('protein')) nutrients.protein = nutrient.value;
+                    if (name?.includes('carbohydrate')) nutrients.carbs = nutrient.value;
+                    if (name?.includes('fat') && !name?.includes('fatty')) nutrients.fat = nutrient.value;
+                    if (name?.includes('energy') || name?.includes('calorie')) nutrients.calories = nutrient.value;
+                });
+
+                return {
+                    foodName: food.description,
+                    dbFoodName: `${food.description} (USDA)`,
+                    brandName: food.brandOwner || '',
+                    calories: nutrients.calories || 0,
+                    protein: nutrients.protein || 0,
+                    carbs: nutrients.carbs || 0,
+                    fat: nutrients.fat || 0,
+                    servingSize: 100,
+                    servingUnit: 'g'
+                };
+            }
+        } catch (error) {
+            console.log('USDA search failed:', error);
+        }
+        return null;
+    }
+
+    showScannedProductModal(foodData) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>Scanned Product</h3>
+                <div class="modal-food-name">${foodData.foodName}</div>
+                ${foodData.brandName ? `<div class="result-brand">${foodData.brandName}</div>` : ''}
+                ${foodData.source ? `<div class="result-source" style="color: var(--text-secondary); font-size: 12px; margin-top: 4px;">Source: ${foodData.source}</div>` : ''}
+                <div class="result-nutrition">
+                    ${Math.round(foodData.calories)} cal •
+                    P: ${Math.round(foodData.protein)}g •
+                    C: ${Math.round(foodData.carbs)}g •
+                    F: ${Math.round(foodData.fat)}g
+                    (per 100g)
+                </div>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Quantity (grams)</label>
+                    <input type="number" id="barcodeQuantity" value="100" min="1">
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn-cancel" onclick="app.closeModal()">Cancel</button>
+                    <button class="btn-save" onclick="app.addScannedFood()">Add Food</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Store scanned food data temporarily
+        this.scannedFoodData = foodData;
+
+        // Focus quantity input
+        setTimeout(() => document.getElementById('barcodeQuantity').focus(), 100);
     }
 
     addScannedFood() {
