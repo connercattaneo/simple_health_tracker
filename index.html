@@ -25,6 +25,12 @@
 
         <!-- Quick Input -->
         <section class="quick-input">
+            <select id="mealTypeSelect" class="meal-type-select">
+                <option value="breakfast">🍳 Breakfast</option>
+                <option value="lunch">🥗 Lunch</option>
+                <option value="dinner">🍽️ Dinner</option>
+                <option value="snack">🍎 Snack</option>
+            </select>
             <input
                 type="text"
                 id="foodInput"
@@ -127,6 +133,13 @@
             <h2>Settings</h2>
 
             <div class="settings-group">
+                <h3>Appearance</h3>
+                <label for="darkModeToggle">
+                    <input type="checkbox" id="darkModeToggle"> Enable Dark Mode
+                </label>
+            </div>
+
+            <div class="settings-group">
                 <h3>USDA API Configuration</h3>
                 <label for="apiKeyInput">USDA FoodData Central API Key (Optional)</label>
                 <input type="password" id="apiKeyInput" placeholder="Enter your API key">
@@ -135,21 +148,36 @@
             </div>
 
             <div class="settings-group">
+                <h3>Goal Type</h3>
+                <label for="goalTypeSelect">
+                    <select id="goalTypeSelect">
+                        <option value="grams">Absolute (grams)</option>
+                        <option value="percentage">Percentage of calories</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="settings-group">
                 <h3>Goals</h3>
                 <label for="calorieGoalInput">Daily Calorie Goal</label>
                 <input type="number" id="calorieGoalInput" placeholder="2000">
             </div>
-            <div class="settings-group">
+            <div class="settings-group" id="gramsGoalsGroup">
                 <label for="proteinGoalInput">Protein Goal (g)</label>
                 <input type="number" id="proteinGoalInput" placeholder="150">
-            </div>
-            <div class="settings-group">
                 <label for="carbGoalInput">Carbs Goal (g)</label>
                 <input type="number" id="carbGoalInput" placeholder="200">
-            </div>
-            <div class="settings-group">
                 <label for="fatGoalInput">Fat Goal (g)</label>
                 <input type="number" id="fatGoalInput" placeholder="65">
+            </div>
+            <div class="settings-group hidden" id="percentageGoalsGroup">
+                <label for="proteinPercentInput">Protein (% of calories)</label>
+                <input type="number" id="proteinPercentInput" placeholder="30" min="0" max="100">
+                <label for="carbPercentInput">Carbs (% of calories)</label>
+                <input type="number" id="carbPercentInput" placeholder="40" min="0" max="100">
+                <label for="fatPercentInput">Fat (% of calories)</label>
+                <input type="number" id="fatPercentInput" placeholder="30" min="0" max="100">
+                <p class="help-text">Percentages should add up to 100%</p>
             </div>
             <button id="saveSettings" class="btn-primary">Save Settings</button>
 

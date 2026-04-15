@@ -22,14 +22,30 @@ class HealthTracker {
             calorieGoal: 2000,
             proteinGoal: 150,
             carbGoal: 200,
-            fatGoal: 65
+            fatGoal: 65,
+            darkMode: false,
+            goalType: 'grams',  // 'grams' or 'percentage'
+            proteinPercent: 30,
+            carbPercent: 40,
+            fatPercent: 30
         };
 
         const saved = localStorage.getItem('healthTrackerSettings');
         this.settings = saved ? JSON.parse(saved) : defaultSettings;
 
+        // Apply dark mode
+        this.applyTheme();
+
         // Update UI
         document.getElementById('goalCalories').textContent = this.settings.calorieGoal;
+    }
+
+    applyTheme() {
+        if (this.settings.darkMode) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
     }
 
     saveSettings() {
@@ -80,11 +96,31 @@ class HealthTracker {
 
         // Settings
         document.getElementById('saveSettings').addEventListener('click', () => this.updateSettings());
+        document.getElementById('darkModeToggle').addEventListener('change', (e) => {
+            this.settings.darkMode = e.target.checked;
+            this.applyTheme();
+        });
+        document.getElementById('goalTypeSelect').addEventListener('change', (e) => {
+            this.toggleGoalInputs(e.target.value);
+        });
         document.getElementById('exportData').addEventListener('click', () => this.exportData());
         document.getElementById('importData').addEventListener('click', () => {
             document.getElementById('importFile').click();
         });
         document.getElementById('importFile').addEventListener('change', (e) => this.importData(e));
+    }
+
+    toggleGoalInputs(type) {
+        const gramsGroup = document.getElementById('gramsGoalsGroup');
+        const percentageGroup = document.getElementById('percentageGoalsGroup');
+
+        if (type === 'percentage') {
+            gramsGroup.classList.add('hidden');
+            percentageGroup.classList.remove('hidden');
+        } else {
+            gramsGroup.classList.remove('hidden');
+            percentageGroup.classList.add('hidden');
+        }
     }
 
     async scanBarcode() {
@@ -340,9 +376,12 @@ class HealthTracker {
     }
 
     addFoodEntry(foodData, quantity, unit, rawInput) {
+        const mealType = document.getElementById('mealTypeSelect').value;
+
         const entry = {
             id: Date.now(),
             date: this.currentDate,
+            mealType: mealType,  // Add meal type
             rawInput: rawInput,
             foodName: foodData.foodName || foodData.dbFoodName,
             dbFoodName: foodData.dbFoodName,
@@ -822,30 +861,60 @@ class HealthTracker {
             progressBar.classList.remove('over');
         }
 
-        // Render food list
+        // Render food list grouped by meal type
         const foodList = document.getElementById('foodList');
         if (entries.length === 0) {
             foodList.innerHTML = '<div class="empty-state">No foods logged yet today</div>';
         } else {
-            foodList.innerHTML = entries.map(entry => `
-                <div class="food-item">
-                    <div class="food-info">
-                        <div class="food-name">
-                            ${entry.foodName}
-                            ${entry.dbFoodName ? `<span class="db-match">(${entry.dbFoodName})</span>` : ''}
+            // Group by meal type
+            const mealGroups = {
+                breakfast: entries.filter(e => e.mealType === 'breakfast'),
+                lunch: entries.filter(e => e.mealType === 'lunch'),
+                dinner: entries.filter(e => e.mealType === 'dinner'),
+                snack: entries.filter(e => e.mealType === 'snack' || !e.mealType)  // Default for old entries
+            };
+
+            const mealLabels = {
+                breakfast: '🍳 Breakfast',
+                lunch: '🥗 Lunch',
+                dinner: '🍽️ Dinner',
+                snack: '🍎 Snacks'
+            };
+
+            let html = '';
+            for (const [mealType, mealEntries] of Object.entries(mealGroups)) {
+                if (mealEntries.length > 0) {
+                    const mealTotal = mealEntries.reduce((sum, e) => sum + e.calories, 0);
+                    html += `
+                        <div class="meal-group">
+                            <div class="meal-header">
+                                <h3>${mealLabels[mealType]}</h3>
+                                <span class="meal-total">${mealTotal} cal</span>
+                            </div>
+                            ${mealEntries.map(entry => `
+                                <div class="food-item">
+                                    <div class="food-info">
+                                        <div class="food-name">
+                                            ${entry.foodName}
+                                            ${entry.dbFoodName ? `<span class="db-match">(${entry.dbFoodName})</span>` : ''}
+                                        </div>
+                                        <div class="food-details">
+                                            ${entry.quantity}${entry.unit} •
+                                            P: ${Math.round(entry.protein)}g •
+                                            C: ${Math.round(entry.carbs)}g •
+                                            F: ${Math.round(entry.fat)}g
+                                        </div>
+                                    </div>
+                                    <span class="food-calories">${entry.calories}</span>
+                                    <button class="edit-btn" onclick="app.editFood(${entry.id})">✎</button>
+                                    <button class="delete-btn" onclick="app.deleteFood(${entry.id})">✕</button>
+                                </div>
+                            `).join('')}
                         </div>
-                        <div class="food-details">
-                            ${entry.quantity}${entry.unit} •
-                            P: ${Math.round(entry.protein)}g •
-                            C: ${Math.round(entry.carbs)}g •
-                            F: ${Math.round(entry.fat)}g
-                        </div>
-                    </div>
-                    <span class="food-calories">${entry.calories}</span>
-                    <button class="edit-btn" onclick="app.editFood(${entry.id})">✎</button>
-                    <button class="delete-btn" onclick="app.deleteFood(${entry.id})">✕</button>
-                </div>
-            `).join('');
+                    `;
+                }
+            }
+            foodList.innerHTML = html;
         }
 
         // Update weight section visibility
@@ -1104,6 +1173,19 @@ class HealthTracker {
         document.getElementById('carbGoalInput').value = this.settings.carbGoal;
         document.getElementById('fatGoalInput').value = this.settings.fatGoal;
 
+        // Dark mode
+        document.getElementById('darkModeToggle').checked = this.settings.darkMode || false;
+
+        // Goal type
+        const goalType = this.settings.goalType || 'grams';
+        document.getElementById('goalTypeSelect').value = goalType;
+        this.toggleGoalInputs(goalType);
+
+        // Percentage goals
+        document.getElementById('proteinPercentInput').value = this.settings.proteinPercent || 30;
+        document.getElementById('carbPercentInput').value = this.settings.carbPercent || 40;
+        document.getElementById('fatPercentInput').value = this.settings.fatPercent || 30;
+
         // Load API key (show placeholder if using DEMO_KEY)
         const apiKey = localStorage.getItem('usdaApiKey');
         document.getElementById('apiKeyInput').value = apiKey || '';
@@ -1146,9 +1228,30 @@ class HealthTracker {
     // Settings
     updateSettings() {
         this.settings.calorieGoal = parseInt(document.getElementById('calorieGoalInput').value) || 2000;
-        this.settings.proteinGoal = parseInt(document.getElementById('proteinGoalInput').value) || 150;
-        this.settings.carbGoal = parseInt(document.getElementById('carbGoalInput').value) || 200;
-        this.settings.fatGoal = parseInt(document.getElementById('fatGoalInput').value) || 65;
+
+        // Get goal type
+        this.settings.goalType = document.getElementById('goalTypeSelect').value;
+
+        if (this.settings.goalType === 'percentage') {
+            // Save percentage goals
+            this.settings.proteinPercent = parseFloat(document.getElementById('proteinPercentInput').value) || 30;
+            this.settings.carbPercent = parseFloat(document.getElementById('carbPercentInput').value) || 40;
+            this.settings.fatPercent = parseFloat(document.getElementById('fatPercentInput').value) || 30;
+
+            // Calculate gram goals from percentages
+            const caloriesFromProtein = (this.settings.calorieGoal * this.settings.proteinPercent / 100);
+            const caloriesFromCarbs = (this.settings.calorieGoal * this.settings.carbPercent / 100);
+            const caloriesFromFat = (this.settings.calorieGoal * this.settings.fatPercent / 100);
+
+            this.settings.proteinGoal = Math.round(caloriesFromProtein / 4);  // 4 cal per g of protein
+            this.settings.carbGoal = Math.round(caloriesFromCarbs / 4);  // 4 cal per g of carbs
+            this.settings.fatGoal = Math.round(caloriesFromFat / 9);  // 9 cal per g of fat
+        } else {
+            // Use absolute gram goals
+            this.settings.proteinGoal = parseInt(document.getElementById('proteinGoalInput').value) || 150;
+            this.settings.carbGoal = parseInt(document.getElementById('carbGoalInput').value) || 200;
+            this.settings.fatGoal = parseInt(document.getElementById('fatGoalInput').value) || 65;
+        }
 
         this.saveSettings();
 
