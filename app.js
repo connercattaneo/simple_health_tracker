@@ -848,6 +848,45 @@ class HealthTracker {
             return;
         }
 
+        // For single data point, add some padding to the range
+        if (weightData.length === 1) {
+            const singleWeight = weightData[0].weight;
+            const minWeight = singleWeight - 2;
+            const maxWeight = singleWeight + 2;
+            const range = maxWeight - minWeight;
+
+            // Chart dimensions
+            const padding = 40;
+            const chartWidth = width - padding * 2;
+            const chartHeight = height - padding * 2;
+
+            // Draw axes
+            ctx.strokeStyle = '#C6C6C8';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.stroke();
+
+            // Draw single point
+            const x = padding + chartWidth / 2;
+            const y = height - padding - chartHeight / 2;
+
+            ctx.fillStyle = '#007AFF';
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw labels
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            ctx.fillText(`${Math.round(maxWeight)} lbs`, 5, padding + 5);
+            ctx.fillText(`${Math.round(minWeight)} lbs`, 5, height - padding - 5);
+
+            return;
+        }
+
         // Calculate min/max for scaling
         const weights = weightData.map(d => d.weight);
         const minWeight = Math.min(...weights) - 2;
@@ -921,6 +960,16 @@ class HealthTracker {
             return { date, calories: totalCals };
         });
 
+        // Check if there's any data at all
+        const hasData = calorieData.some(d => d.calories > 0);
+
+        if (!hasData) {
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#8E8E93';
+            ctx.fillText('No calorie data yet', width / 2 - 60, height / 2);
+            return;
+        }
+
         // Calculate max for scaling
         const maxCalories = Math.max(...calorieData.map(d => d.calories), this.settings.calorieGoal);
 
@@ -989,9 +1038,13 @@ class HealthTracker {
 
         // Hide all sections
         document.querySelector('.quick-input').style.display = view === 'today' ? 'flex' : 'none';
-        document.querySelector('.weight-section').style.display = view === 'today' ? 'flex' : 'none';
         document.querySelector('.daily-summary').style.display = view === 'today' ? 'block' : 'none';
         document.querySelector('.food-log').style.display = view === 'today' ? 'block' : 'none';
+
+        // Hide weight section when not on today view
+        if (view !== 'today') {
+            document.querySelector('.weight-section').style.display = 'none';
+        }
 
         document.getElementById('trendsView').classList.toggle('hidden', view !== 'trends');
         document.getElementById('settingsView').classList.toggle('hidden', view !== 'settings');
@@ -1001,6 +1054,9 @@ class HealthTracker {
             this.renderTrendsView();
         } else if (view === 'settings') {
             this.renderSettingsView();
+        } else if (view === 'today') {
+            // Update weight section visibility when switching to today view
+            this.updateWeightSectionVisibility();
         }
     }
 
