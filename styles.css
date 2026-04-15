@@ -102,14 +102,22 @@ body {
     margin: 16px;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    display: grid;
-    grid-template-columns: 1fr auto auto;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
-    align-items: center;
+}
+
+.quick-input > * {
+    width: 100%;
+}
+
+.quick-input .button-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
 }
 
 .meal-type-select {
-    grid-column: 1 / -1;
     padding: 12px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -119,7 +127,6 @@ body {
 }
 
 #foodInput {
-    grid-column: 1 / -1;
     padding: 12px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -141,16 +148,17 @@ body {
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    min-width: 70px;
     min-height: 44px;
     white-space: nowrap;
+    flex: 1;
 }
 
 .btn-scan {
     background: var(--secondary-color) !important;
     padding: 12px !important;
     font-size: 20px;
-    min-width: 44px !important;
+    flex: 0 0 auto;
+    min-width: 60px;
 }
 
 .quick-input button:active,
@@ -691,17 +699,41 @@ canvas {
     max-width: 500px;
 }
 
-#scannerVideo {
+/* Quagga scanner viewport */
+#interactive {
     width: 100%;
     max-width: 400px;
+    margin: 16px auto;
+    position: relative;
+    overflow: hidden;
     border-radius: 8px;
-    margin: 16px 0;
+}
+
+#interactive video {
+    width: 100%;
+    height: auto;
+}
+
+#interactive canvas.drawingBuffer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
 }
 
 .scanner-instructions {
     text-align: center;
     color: var(--text-secondary);
+    margin: 8px 0;
+    font-weight: 600;
+}
+
+.scanner-help {
+    text-align: center;
+    color: var(--text-secondary);
     margin-bottom: 16px;
+    font-size: 14px;
 }
 
 /* Meal Type Selector */

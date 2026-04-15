@@ -134,165 +134,93 @@ class HealthTracker {
 
     async scanBarcode() {
         try {
-            // Request camera access
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment' }
-            });
-
-            // Create video element and scanner modal
+            // Create scanner modal with overlay canvas for visual feedback
             const modal = document.createElement('div');
             modal.className = 'modal';
             modal.innerHTML = `
                 <div class="modal-content barcode-scanner-modal">
                     <h3>Scan Barcode</h3>
-                    <video id="scannerVideo" autoplay playsinline muted></video>
-                    <canvas id="scannerCanvas" style="display:none;"></canvas>
-                    <p class="scanner-instructions" id="scannerStatus">Position barcode in the center</p>
+                    <div id="interactive" class="viewport">
+                        <canvas class="drawingBuffer"></canvas>
+                    </div>
+                    <p class="scanner-instructions" id="scannerStatus">Loading camera...</p>
+                    <p class="scanner-help">Hold barcode steady in the red box</p>
                     <button class="btn-cancel" onclick="app.closeBarcodeScanner()">Cancel</button>
                 </div>
             `;
-
             document.body.appendChild(modal);
 
-            const video = document.getElementById('scannerVideo');
-            const canvas = document.getElementById('scannerCanvas');
-            video.srcObject = stream;
-            this.barcodeStream = stream;
-
-            // Use native BarcodeDetector if available, otherwise use ZXing fallback
-            if ('BarcodeDetector' in window) {
-                // Use native BarcodeDetector API
-                const barcodeDetector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
-
-                const detectBarcode = async () => {
-                    try {
-                        const barcodes = await barcodeDetector.detect(video);
-
-                        if (barcodes.length > 0) {
-                            const barcode = barcodes[0].rawValue;
-                            this.closeBarcodeScanner();
-                            await this.lookupBarcode(barcode);
-                        } else if (this.barcodeStream) {
-                            requestAnimationFrame(detectBarcode);
-                        }
-                    } catch (err) {
-                        console.error('Barcode detection error:', err);
-                    }
-                };
-
-                detectBarcode();
-            } else {
-                // Fallback: Use ZXing library for Safari and other browsers
-                this.initZXingScanner(video, canvas);
+            // Load Quagga.js library if not already loaded
+            if (!window.Quagga) {
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/quagga@0.12.1/dist/quagga.min.js';
+                await new Promise((resolve, reject) => {
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error('Failed to load Quagga.js'));
+                    document.head.appendChild(script);
+                });
             }
+
+            // Initialize Quagga
+            window.Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#interactive'),
+                    constraints: {
+                        facingMode: "environment"
+                    }
+                },
+                decoder: {
+                    readers: [
+                        "ean_reader",
+                        "ean_8_reader",
+                        "upc_reader",
+                        "upc_e_reader"
+                    ]
+                },
+                locate: true,
+                locator: {
+                    patchSize: "medium",
+                    halfSample: true
+                }
+            }, (err) => {
+                if (err) {
+                    console.error('Quagga init error:', err);
+                    alert('Unable to access camera. Please check permissions.');
+                    this.closeBarcodeScanner();
+                    return;
+                }
+
+                document.getElementById('scannerStatus').textContent = 'Camera ready - scanning...';
+                window.Quagga.start();
+                this.barcodeStream = true; // Flag that scanner is active
+            });
+
+            // Handle successful barcode detection
+            window.Quagga.onDetected((result) => {
+                if (result && result.codeResult && result.codeResult.code) {
+                    const barcode = result.codeResult.code;
+                    document.getElementById('scannerStatus').textContent = `Found: ${barcode}`;
+
+                    // Stop scanner and lookup barcode
+                    this.closeBarcodeScanner();
+                    this.lookupBarcode(barcode);
+                }
+            });
 
         } catch (error) {
-            console.error('Camera access error:', error);
-            alert('Unable to access camera. Please check permissions or enter food manually.');
-        }
-    }
-
-    async initZXingScanner(video, canvas) {
-        // Dynamically load ZXing library if not already loaded
-        if (!window.ZXing) {
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js';
-            script.onload = () => {
-                this.startZXingScanning(video, canvas);
-            };
-            script.onerror = () => {
-                alert('Failed to load barcode scanner library. Please enter food manually.');
-                this.closeBarcodeScanner();
-            };
-            document.head.appendChild(script);
-        } else {
-            this.startZXingScanning(video, canvas);
-        }
-    }
-
-    startZXingScanning(video, canvas) {
-        const codeReader = new ZXing.BrowserMultiFormatReader();
-        const ctx = canvas.getContext('2d');
-        let scanCount = 0;
-
-        const updateStatus = (message) => {
-            const statusEl = document.getElementById('scannerStatus');
-            if (statusEl) statusEl.textContent = message;
-        };
-
-        const scanFrame = () => {
-            if (!this.barcodeStream) return;
-
-            try {
-                // Set canvas size to match video
-                if (video.videoWidth > 0 && video.videoHeight > 0) {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-
-                    // Draw current video frame to canvas
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                    // Update status every 10 scans
-                    scanCount++;
-                    if (scanCount % 10 === 0) {
-                        updateStatus(`Scanning... (${scanCount} attempts)`);
-                    }
-
-                    // Try to decode barcode from canvas using multiple methods
-                    try {
-                        const result = codeReader.decodeFromCanvas(canvas);
-                        if (result && result.text) {
-                            updateStatus(`Found barcode: ${result.text}`);
-                            this.closeBarcodeScanner();
-                            this.lookupBarcode(result.text);
-                            return;
-                        }
-                    } catch (decodeErr) {
-                        // Try alternative: decode from image data
-                        try {
-                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                            const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
-                            const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
-                            const result = codeReader.decode(binaryBitmap);
-                            if (result && result.text) {
-                                updateStatus(`Found barcode: ${result.text}`);
-                                this.closeBarcodeScanner();
-                                this.lookupBarcode(result.text);
-                                return;
-                            }
-                        } catch (err2) {
-                            // No barcode found, continue
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error('Scan frame error:', err);
-            }
-
-            // Continue scanning at ~10 FPS to reduce CPU usage
-            if (this.barcodeStream) {
-                setTimeout(() => requestAnimationFrame(scanFrame), 100);
-            }
-        };
-
-        // Wait for video to be ready
-        video.addEventListener('loadedmetadata', () => {
-            updateStatus('Camera ready, scanning...');
-            setTimeout(() => scanFrame(), 500);
-        });
-
-        // Start immediately if video is already loaded
-        if (video.readyState >= video.HAVE_METADATA) {
-            updateStatus('Camera ready, scanning...');
-            setTimeout(() => scanFrame(), 500);
+            console.error('Scanner error:', error);
+            alert('Unable to start barcode scanner. Please enter food manually.');
+            this.closeBarcodeScanner();
         }
     }
 
     closeBarcodeScanner() {
-        if (this.barcodeStream) {
-            this.barcodeStream.getTracks().forEach(track => track.stop());
-            this.barcodeStream = null;
+        if (window.Quagga) {
+            window.Quagga.stop();
         }
+        this.barcodeStream = null;
         this.closeModal();
     }
 
