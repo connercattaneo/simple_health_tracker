@@ -5,6 +5,8 @@ A lightweight, privacy-focused health tracking web app optimized for iPhone. Tra
 ## Features
 
 - **Quick Food Entry**: Type "chicken breast 220g" and hit enter - that's it!
+- **Meal Organization**: Separate foods by breakfast, lunch, dinner, and snacks
+- **Copy Meals**: Repeat meals from previous days with one click
 - **Barcode Scanner**: Scan product barcodes to automatically lookup nutrition information
 - **External Food Database**: Searches USDA FoodData Central with 300,000+ foods
 - **Smart Food Matching**: Shows multiple options when there are similar foods
@@ -12,10 +14,11 @@ A lightweight, privacy-focused health tracking web app optimized for iPhone. Tra
 - **Automatic Calorie Calculation**: Accurate nutrition data from comprehensive database
 - **Offline Fallback**: Built-in food database for when API is unavailable
 - **Macro Tracking**: Track protein, carbs, and fat
+- **Flexible Goal Setting**: Set goals by absolute grams OR by percentage of calories
 - **Edit Food Entries**: Modify calories and macros for any logged food
 - **Weight Tracking**: Log your daily weight (auto-hides after logging)
-- **Goal Setting**: Set daily calorie and macro goals
 - **Trends & Analytics**: View your progress over time with interactive charts
+- **Dark Mode**: Easy on the eyes with full dark mode support
 - **Smart UI**: Weight logging section hides after entry for cleaner interface
 - **Single Point Charts**: Charts display properly even with just one data point
 - **100% Private**: All data stored locally on your device
@@ -114,6 +117,24 @@ The app uses a public demo API key limited to 30 requests/hour. For better perfo
 
 **Security Note:** Your API key is stored locally in your browser's localStorage and is never committed to the repository or shared with anyone.
 
+### Using Meal Categories
+
+When adding food, select the meal type from the dropdown:
+- 🍳 Breakfast
+- 🥗 Lunch
+- 🍽️ Dinner
+- 🍎 Snack
+
+Your foods will be organized by meal type with calorie subtotals for each meal.
+
+### Copying Meals from Previous Days
+
+Save time by repeating meals:
+1. Click the "📋 Copy Meal" button in the food log
+2. Select a previous date (last 7 days)
+3. Choose which meal (breakfast, lunch, dinner, or snacks) to copy
+4. All foods from that meal will be added to today
+
 ### Logging Weight
 
 Enter your weight in the weight input field and click "Log Weight". This will save your weight for the current day.
@@ -121,10 +142,14 @@ Enter your weight in the weight input field and click "Log Weight". This will sa
 ### Setting Goals
 
 1. Tap the Settings icon (⚙️) at the bottom
-2. (Optional) Add your USDA API key for better food search results
-3. Enter your daily calorie goal
-4. Enter your macro goals (protein, carbs, fat in grams)
-5. Tap "Save Settings"
+2. **Appearance**: Toggle dark mode on/off
+3. **API Configuration**: (Optional) Add your USDA API key for better food search results
+4. **Goal Type**: Choose between:
+   - **Absolute (grams)**: Set exact gram amounts for protein, carbs, and fat
+   - **Percentage of calories**: Set macros as a percentage (e.g., 30% protein, 40% carbs, 30% fat)
+5. Enter your daily calorie goal
+6. Enter your macro goals (based on your chosen goal type)
+7. Tap "Save Settings"
 
 ### Viewing Trends
 
@@ -192,17 +217,16 @@ This is a Progressive Web App (PWA), which means you can install it on your iPho
 ## Future Enhancements
 
 Potential features to add:
-- [ ] AI-powered food parsing using Claude API
+- [ ] AI-powered food parsing using Claude API (improve free-form text interpretation)
 - [ ] Photo-based food logging
-- [ ] Meal templates/favorites
-- [ ] Custom foods
-- [ ] Cloud sync (optional)
-- [ ] Dark mode
+- [ ] Meal templates/favorites (save custom meal combinations)
+- [ ] Custom foods (add your own recipes with nutrition info)
+- [ ] Cloud sync (optional, for multi-device usage)
 - [ ] Weekly/monthly reports
 - [ ] Export to CSV
-- [ ] Nutrition goals by percentage
 - [ ] Water tracking
 - [ ] Exercise tracking
+- [ ] Nutrition insights and recommendations
 
 ## Customization
 
