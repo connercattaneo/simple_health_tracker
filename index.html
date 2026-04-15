@@ -125,7 +125,17 @@
         <!-- Settings View (hidden by default) -->
         <section id="settingsView" class="view-section hidden">
             <h2>Settings</h2>
+
             <div class="settings-group">
+                <h3>USDA API Configuration</h3>
+                <label for="apiKeyInput">USDA FoodData Central API Key (Optional)</label>
+                <input type="password" id="apiKeyInput" placeholder="Enter your API key">
+                <p class="help-text">Get a free API key at <a href="https://fdc.nal.usda.gov/api-key-signup.html" target="_blank">fdc.nal.usda.gov/api-key-signup.html</a><br>
+                Using DEMO_KEY limits you to 30 requests/hour. Your own key gives 1000 requests/hour.</p>
+            </div>
+
+            <div class="settings-group">
+                <h3>Goals</h3>
                 <label for="calorieGoalInput">Daily Calorie Goal</label>
                 <input type="number" id="calorieGoalInput" placeholder="2000">
             </div>
@@ -141,7 +151,7 @@
                 <label for="fatGoalInput">Fat Goal (g)</label>
                 <input type="number" id="fatGoalInput" placeholder="65">
             </div>
-            <button id="saveSettings" class="btn-primary">Save Goals</button>
+            <button id="saveSettings" class="btn-primary">Save Settings</button>
 
             <div class="settings-group">
                 <h3>Data Management</h3>

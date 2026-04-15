@@ -102,17 +102,17 @@ The app will:
 3. Calculate calories and macros based on your quantity
 4. Fall back to the built-in database if the API is unavailable
 
-### Getting a Personal API Key (Optional but Recommended)
+### Setting Up Your USDA API Key (Recommended)
 
-The app uses a demo API key limited to 30 requests/hour. For unlimited use:
+The app uses a public demo API key limited to 30 requests/hour. For better performance:
 
 1. Go to https://fdc.nal.usda.gov/api-key-signup.html
 2. Sign up for a free API key (no credit card required)
-3. Open `app.js` and replace `'DEMO_KEY'` on line 185 with your key:
-   ```javascript
-   const apiKey = 'YOUR_API_KEY_HERE';
-   ```
-4. Your personal key gives you 1000 requests/hour for free
+3. Open the app and go to Settings (⚙️)
+4. Paste your API key in the "USDA API Configuration" section
+5. Click "Save Settings"
+
+**Security Note:** Your API key is stored locally in your browser's localStorage and is never committed to the repository or shared with anyone.
 
 ### Logging Weight
 
@@ -121,9 +121,10 @@ Enter your weight in the weight input field and click "Log Weight". This will sa
 ### Setting Goals
 
 1. Tap the Settings icon (⚙️) at the bottom
-2. Enter your daily calorie goal
-3. Enter your macro goals (protein, carbs, fat in grams)
-4. Tap "Save Goals"
+2. (Optional) Add your USDA API key for better food search results
+3. Enter your daily calorie goal
+4. Enter your macro goals (protein, carbs, fat in grams)
+5. Tap "Save Settings"
 
 ### Viewing Trends
 

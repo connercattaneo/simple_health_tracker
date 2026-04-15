@@ -316,7 +316,7 @@ class HealthTracker {
 
         const parsed = this.parseFood(text);
 
-        // Search external database first
+        // Always try external database first (USDA API)
         const searchResults = await this.searchFoodDatabase(parsed.name);
 
         if (searchResults && searchResults.length > 1) {
@@ -326,11 +326,12 @@ class HealthTracker {
             // Use the single result
             this.addFoodEntry(searchResults[0], parsed.quantity, parsed.unit, text);
         } else {
-            // Fallback to local database
+            // Only use local database as last resort fallback
+            // This happens when API fails or no results found
             const nutrition = this.getNutrition(parsed.name, parsed.quantity, parsed.unit);
             this.addFoodEntry({
                 foodName: parsed.name,
-                dbFoodName: nutrition.dbFoodName,
+                dbFoodName: nutrition.dbFoodName + ' (local fallback)',
                 ...nutrition
             }, parsed.quantity, parsed.unit, text);
         }
@@ -404,10 +405,11 @@ class HealthTracker {
 
     async searchFoodDatabase(foodName) {
         try {
-            // Use USDA FoodData Central API
-            const apiKey = 'DEMO_KEY'; // Free demo key, limited to 30 requests/hour
+            // Get API key from localStorage or use DEMO_KEY
+            // Users should set their own key via Settings to avoid rate limits
+            const apiKey = localStorage.getItem('usdaApiKey') || 'DEMO_KEY';
             const query = encodeURIComponent(foodName);
-            const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${query}&pageSize=5&api_key=${apiKey}`;
+            const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${query}&pageSize=10&api_key=${apiKey}`;
 
             const response = await fetch(url);
             if (!response.ok) {
@@ -418,6 +420,7 @@ class HealthTracker {
             const data = await response.json();
 
             if (!data.foods || data.foods.length === 0) {
+                console.log('No foods found in USDA database for:', foodName);
                 return null;
             }
 
@@ -1100,6 +1103,10 @@ class HealthTracker {
         document.getElementById('proteinGoalInput').value = this.settings.proteinGoal;
         document.getElementById('carbGoalInput').value = this.settings.carbGoal;
         document.getElementById('fatGoalInput').value = this.settings.fatGoal;
+
+        // Load API key (show placeholder if using DEMO_KEY)
+        const apiKey = localStorage.getItem('usdaApiKey');
+        document.getElementById('apiKeyInput').value = apiKey || '';
     }
 
     // View Switching
@@ -1144,6 +1151,15 @@ class HealthTracker {
         this.settings.fatGoal = parseInt(document.getElementById('fatGoalInput').value) || 65;
 
         this.saveSettings();
+
+        // Save API key to localStorage (not in settings file for security)
+        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        if (apiKey) {
+            localStorage.setItem('usdaApiKey', apiKey);
+        } else {
+            localStorage.removeItem('usdaApiKey');
+        }
+
         document.getElementById('goalCalories').textContent = this.settings.calorieGoal;
         alert('Settings saved!');
     }
