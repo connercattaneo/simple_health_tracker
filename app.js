@@ -89,12 +89,6 @@ class HealthTracker {
 
     async scanBarcode() {
         try {
-            // Check if browser supports Barcode Detection API
-            if (!('BarcodeDetector' in window)) {
-                alert('Barcode scanning not supported on this device. Try using the camera on a newer device or manually enter the food item.');
-                return;
-            }
-
             // Request camera access
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'environment' }
@@ -106,7 +100,8 @@ class HealthTracker {
             modal.innerHTML = `
                 <div class="modal-content barcode-scanner-modal">
                     <h3>Scan Barcode</h3>
-                    <video id="scannerVideo" autoplay playsinline></video>
+                    <video id="scannerVideo" autoplay playsinline muted></video>
+                    <canvas id="scannerCanvas" style="display:none;"></canvas>
                     <p class="scanner-instructions">Position barcode in the center</p>
                     <button class="btn-cancel" onclick="app.closeBarcodeScanner()">Cancel</button>
                 </div>
@@ -115,34 +110,104 @@ class HealthTracker {
             document.body.appendChild(modal);
 
             const video = document.getElementById('scannerVideo');
+            const canvas = document.getElementById('scannerCanvas');
             video.srcObject = stream;
             this.barcodeStream = stream;
 
-            // Start barcode detection
-            const barcodeDetector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+            // Use native BarcodeDetector if available, otherwise use ZXing fallback
+            if ('BarcodeDetector' in window) {
+                // Use native BarcodeDetector API
+                const barcodeDetector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
 
-            const detectBarcode = async () => {
-                try {
-                    const barcodes = await barcodeDetector.detect(video);
+                const detectBarcode = async () => {
+                    try {
+                        const barcodes = await barcodeDetector.detect(video);
 
-                    if (barcodes.length > 0) {
-                        const barcode = barcodes[0].rawValue;
-                        this.closeBarcodeScanner();
-                        await this.lookupBarcode(barcode);
-                    } else if (this.barcodeStream) {
-                        // Continue scanning
-                        requestAnimationFrame(detectBarcode);
+                        if (barcodes.length > 0) {
+                            const barcode = barcodes[0].rawValue;
+                            this.closeBarcodeScanner();
+                            await this.lookupBarcode(barcode);
+                        } else if (this.barcodeStream) {
+                            requestAnimationFrame(detectBarcode);
+                        }
+                    } catch (err) {
+                        console.error('Barcode detection error:', err);
                     }
-                } catch (err) {
-                    console.error('Barcode detection error:', err);
-                }
-            };
+                };
 
-            detectBarcode();
+                detectBarcode();
+            } else {
+                // Fallback: Use ZXing library for Safari and other browsers
+                this.initZXingScanner(video, canvas);
+            }
 
         } catch (error) {
             console.error('Camera access error:', error);
             alert('Unable to access camera. Please check permissions or enter food manually.');
+        }
+    }
+
+    async initZXingScanner(video, canvas) {
+        // Dynamically load ZXing library if not already loaded
+        if (!window.ZXing) {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js';
+            script.onload = () => {
+                this.startZXingScanning(video, canvas);
+            };
+            script.onerror = () => {
+                alert('Failed to load barcode scanner library. Please enter food manually.');
+                this.closeBarcodeScanner();
+            };
+            document.head.appendChild(script);
+        } else {
+            this.startZXingScanning(video, canvas);
+        }
+    }
+
+    startZXingScanning(video, canvas) {
+        const codeReader = new ZXing.BrowserMultiFormatReader();
+        const ctx = canvas.getContext('2d');
+
+        const scanFrame = async () => {
+            if (!this.barcodeStream) return;
+
+            try {
+                // Set canvas size to match video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                // Draw current video frame to canvas
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Try to decode barcode from canvas
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const result = await codeReader.decodeFromImageData(imageData);
+
+                if (result) {
+                    const barcode = result.text;
+                    this.closeBarcodeScanner();
+                    await this.lookupBarcode(barcode);
+                    return;
+                }
+            } catch (err) {
+                // No barcode found in this frame, continue scanning
+            }
+
+            // Continue scanning
+            if (this.barcodeStream) {
+                requestAnimationFrame(scanFrame);
+            }
+        };
+
+        // Wait for video to be ready
+        video.addEventListener('loadedmetadata', () => {
+            scanFrame();
+        });
+
+        // Start immediately if video is already loaded
+        if (video.readyState >= video.HAVE_METADATA) {
+            scanFrame();
         }
     }
 
@@ -463,11 +528,23 @@ class HealthTracker {
             'greek yogurt': { calories: 97, protein: 10, carbs: 3.6, fat: 5, per: 100 },
             'steak': { calories: 271, protein: 25, carbs: 0, fat: 19, per: 100 },
             'ground beef': { calories: 250, protein: 26, carbs: 0, fat: 17, per: 100 },
+            'ground beef raw': { calories: 250, protein: 26, carbs: 0, fat: 17, per: 100 },
+            'ground beef cooked': { calories: 273, protein: 28, carbs: 0, fat: 18, per: 100 },
             'ground beef 80/20': { calories: 254, protein: 25, carbs: 0, fat: 18, per: 100 },
+            'ground beef 80/20 raw': { calories: 254, protein: 25, carbs: 0, fat: 18, per: 100 },
+            'ground beef 80/20 cooked': { calories: 289, protein: 26, carbs: 0, fat: 21, per: 100 },
             'ground beef 85/15': { calories: 215, protein: 26, carbs: 0, fat: 13, per: 100 },
+            'ground beef 85/15 raw': { calories: 215, protein: 26, carbs: 0, fat: 13, per: 100 },
+            'ground beef 85/15 cooked': { calories: 243, protein: 28, carbs: 0, fat: 15, per: 100 },
+            'ground beef 88/12': { calories: 197, protein: 26, carbs: 0, fat: 11, per: 100 },
+            'ground beef 88/12 raw': { calories: 197, protein: 26, carbs: 0, fat: 11, per: 100 },
+            'ground beef 88/12 cooked': { calories: 225, protein: 29, carbs: 0, fat: 12, per: 100 },
             'ground beef 90/10': { calories: 176, protein: 26, carbs: 0, fat: 10, per: 100 },
+            'ground beef 90/10 raw': { calories: 176, protein: 26, carbs: 0, fat: 10, per: 100 },
+            'ground beef 90/10 cooked': { calories: 197, protein: 29, carbs: 0, fat: 11, per: 100 },
             'ground beef 93/7': { calories: 152, protein: 27, carbs: 0, fat: 7, per: 100 },
-            'ground beef 88/12': { calories: 185, protein: 26, carbs: 0, fat: 11, per: 100 },
+            'ground beef 93/7 raw': { calories: 152, protein: 27, carbs: 0, fat: 7, per: 100 },
+            'ground beef 93/7 cooked': { calories: 182, protein: 30, carbs: 0, fat: 8, per: 100 },
             'turkey': { calories: 135, protein: 30, carbs: 0, fat: 1, per: 100 },
             'pork chop': { calories: 231, protein: 23, carbs: 0, fat: 15, per: 100 },
 
@@ -752,8 +829,7 @@ class HealthTracker {
                     <div class="food-info">
                         <div class="food-name">
                             ${entry.foodName}
-                            ${entry.dbFoodName && entry.dbFoodName !== entry.foodName.toLowerCase() ?
-                                `<span class="db-match">(${entry.dbFoodName})</span>` : ''}
+                            ${entry.dbFoodName ? `<span class="db-match">(${entry.dbFoodName})</span>` : ''}
                         </div>
                         <div class="food-details">
                             ${entry.quantity}${entry.unit} •
