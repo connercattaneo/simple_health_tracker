@@ -443,49 +443,75 @@ class HealthTracker {
 
         if (!text) return;
 
-        const parsed = this.parseFood(text);
+        // Show loading indicator
+        this.showLoadingIndicator(true);
 
-        // Try AI-enhanced search first if GitHub token is available
-        const githubToken = localStorage.getItem('githubToken');
-        if (githubToken) {
-            try {
-                const aiResult = await this.aiEnhancedFoodSearch(parsed.name, parsed.quantity, parsed.unit, githubToken);
-                if (aiResult) {
-                    this.addFoodEntry(aiResult, parsed.quantity, parsed.unit, text);
-                    input.value = '';
-                    return;
+        try {
+            const parsed = this.parseFood(text);
+
+            // Try AI-enhanced search first if GitHub token is available
+            const githubToken = localStorage.getItem('githubToken');
+            if (githubToken) {
+                try {
+                    const aiResult = await this.aiEnhancedFoodSearch(parsed.name, parsed.quantity, parsed.unit, githubToken);
+                    if (aiResult) {
+                        this.addFoodEntry(aiResult, parsed.quantity, parsed.unit, text);
+                        input.value = '';
+                        return;
+                    }
+                } catch (error) {
+                    console.log('AI search failed, falling back to standard search:', error);
                 }
-            } catch (error) {
-                console.log('AI search failed, falling back to standard search:', error);
             }
-        }
 
-        // Fallback to standard USDA API search
-        const searchResults = await this.searchFoodDatabase(parsed.name);
+            // Fallback to standard USDA API search
+            const searchResults = await this.searchFoodDatabase(parsed.name);
 
-        if (searchResults && searchResults.length > 0) {
-            // Filter and rank results for better matching
-            const rankedResults = this.rankSearchResults(searchResults, parsed.name, parsed.unit);
+            if (searchResults && searchResults.length > 0) {
+                // Filter and rank results for better matching
+                const rankedResults = this.rankSearchResults(searchResults, parsed.name, parsed.unit);
 
-            // Auto-select if there's a clear best match
-            if (rankedResults.length === 1 || this.shouldAutoSelect(rankedResults, parsed.name)) {
-                this.addFoodEntry(rankedResults[0], parsed.quantity, parsed.unit, text);
+                // Auto-select if there's a clear best match
+                if (rankedResults.length === 1 || this.shouldAutoSelect(rankedResults, parsed.name)) {
+                    this.addFoodEntry(rankedResults[0], parsed.quantity, parsed.unit, text);
+                } else {
+                    // Show selection modal for multiple good matches
+                    this.showFoodSelectionModal(rankedResults, parsed.quantity, parsed.unit, text);
+                }
             } else {
-                // Show selection modal for multiple good matches
-                this.showFoodSelectionModal(rankedResults, parsed.quantity, parsed.unit, text);
+                // Only use local database as last resort fallback
+                // This happens when API fails or no results found
+                const nutrition = this.getNutrition(parsed.name, parsed.quantity, parsed.unit);
+                this.addFoodEntry({
+                    foodName: parsed.name,
+                    dbFoodName: nutrition.dbFoodName + ' (local fallback)',
+                    ...nutrition
+                }, parsed.quantity, parsed.unit, text);
+            }
+
+            input.value = '';
+        } finally {
+            // Always hide loading indicator
+            this.showLoadingIndicator(false);
+        }
+    }
+
+    showLoadingIndicator(show) {
+        const buttonRow = document.querySelector('.button-row');
+        let loadingOverlay = buttonRow.querySelector('.loading-overlay');
+
+        if (show) {
+            if (!loadingOverlay) {
+                loadingOverlay = document.createElement('div');
+                loadingOverlay.className = 'loading-overlay';
+                loadingOverlay.textContent = 'Searching...';
+                buttonRow.appendChild(loadingOverlay);
             }
         } else {
-            // Only use local database as last resort fallback
-            // This happens when API fails or no results found
-            const nutrition = this.getNutrition(parsed.name, parsed.quantity, parsed.unit);
-            this.addFoodEntry({
-                foodName: parsed.name,
-                dbFoodName: nutrition.dbFoodName + ' (local fallback)',
-                ...nutrition
-            }, parsed.quantity, parsed.unit, text);
+            if (loadingOverlay) {
+                loadingOverlay.remove();
+            }
         }
-
-        input.value = '';
     }
 
     async aiEnhancedFoodSearch(foodName, quantity, unit, githubToken) {
@@ -501,11 +527,11 @@ class HealthTracker {
                     messages: [
                         {
                             role: 'system',
-                            content: 'You are a nutrition expert. Given a food description, return the most accurate common food name that would match in a USDA nutrition database, along with a realistic serving size in grams for the described quantity. Return ONLY valid JSON with no markdown formatting.'
+                            content: 'You are a nutrition expert. Given a food description, return the most accurate common food name that would match in a USDA nutrition database, along with a realistic serving size in grams for the described quantity. Pay close attention to lean/fat percentages in meat descriptions (e.g., 88% lean = 88/12, 80% lean = 80/20). Return ONLY valid JSON with no markdown formatting.'
                         },
                         {
                             role: 'user',
-                            content: `Food: "${foodName}", Quantity: ${quantity} ${unit}. Return JSON: {"searchTerm": "best USDA search term", "servingGrams": number, "explanation": "brief reason"}`
+                            content: `Food: "${foodName}", Quantity: ${quantity} ${unit}. Return JSON: {"searchTerm": "best USDA search term preserving exact lean percentage", "servingGrams": number, "explanation": "brief reason"}`
                         }
                     ],
                     model: 'gpt-4o-mini',
@@ -545,21 +571,13 @@ class HealthTracker {
                 // Rank results but prefer those close to AI's suggested serving size
                 const rankedResults = this.rankSearchResults(searchResults, aiSuggestion.searchTerm, unit);
 
-                // Pick the best match considering serving size
+                // Pick the best match
                 let bestMatch = rankedResults[0];
                 const targetGrams = aiSuggestion.servingGrams || 100;
 
-                // If AI suggested a specific serving size, try to find a match with similar size
-                for (const result of rankedResults.slice(0, 3)) {
-                    const servingSize = result.servingSize || 100;
-                    if (Math.abs(servingSize - targetGrams) < Math.abs((bestMatch.servingSize || 100) - targetGrams)) {
-                        bestMatch = result;
-                    }
-                }
-
+                // IMPORTANT: USDA nutrition values are per 100g, not per servingSize
                 // Calculate nutrition based on AI's suggested serving size
-                const servingSize = bestMatch.servingSize || 100;
-                const multiplier = targetGrams / servingSize;
+                const multiplier = targetGrams / 100;  // Fixed: always divide by 100g
 
                 return {
                     foodName: bestMatch.foodName,
