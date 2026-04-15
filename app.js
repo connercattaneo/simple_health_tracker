@@ -508,10 +508,34 @@ class HealthTracker {
 
             // For count-based queries, prefer items typically measured by count
             if (unit === 'count') {
-                const countWords = ['egg', 'banana', 'apple', 'orange', 'slice', 'piece', 'patty', 'breast', 'thigh'];
+                const countWords = ['egg', 'banana', 'apple', 'orange', 'slice', 'piece', 'patty', 'breast', 'thigh', 'drumstick'];
                 if (countWords.some(word => nameLower.includes(word))) {
                     score += 20;
                 }
+
+                // For eggs specifically, prefer "whole" entries over parts
+                if (searchLower.includes('egg')) {
+                    if (nameLower.includes('whole') || nameLower === 'egg' || nameLower === 'eggs') {
+                        score += 30;
+                    }
+                    // Penalize egg parts when searching for whole eggs
+                    if (nameLower.includes('yolk') || nameLower.includes('white') || nameLower.includes('dried') || nameLower.includes('powder')) {
+                        score -= 30;
+                    }
+                }
+
+                // Prefer items with reasonable serving sizes (50-150g or 1 item)
+                const servingSize = food.servingSize || 100;
+                if (servingSize >= 40 && servingSize <= 150) {
+                    score += 15;
+                } else if (servingSize > 300) {
+                    score -= 15;  // Penalize very large servings for count-based searches
+                }
+            }
+
+            // Penalize items with brand names for generic searches
+            if (food.brandName && !searchLower.includes(food.brandName.toLowerCase())) {
+                score -= 5;
             }
 
             return { ...food, score };
@@ -1149,21 +1173,54 @@ class HealthTracker {
             return acc;
         }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
-        // Update summary
+        // Update summary with current values
         document.getElementById('currentCalories').textContent = totals.calories;
         document.getElementById('currentProtein').textContent = Math.round(totals.protein);
         document.getElementById('currentCarbs').textContent = Math.round(totals.carbs);
         document.getElementById('currentFat').textContent = Math.round(totals.fat);
 
-        // Update progress bar
-        const progress = (totals.calories / this.settings.calorieGoal) * 100;
-        const progressBar = document.getElementById('calorieProgress');
-        progressBar.style.width = `${Math.min(progress, 100)}%`;
+        // Update goal values
+        document.getElementById('goalProtein').textContent = this.settings.proteinGoal;
+        document.getElementById('goalCarbs').textContent = this.settings.carbGoal;
+        document.getElementById('goalFat').textContent = this.settings.fatGoal;
 
-        if (progress > 100) {
-            progressBar.classList.add('over');
+        // Update calorie progress bar
+        const calorieProgress = (totals.calories / this.settings.calorieGoal) * 100;
+        const calorieProgressBar = document.getElementById('calorieProgress');
+        calorieProgressBar.style.width = `${Math.min(calorieProgress, 100)}%`;
+
+        if (calorieProgress > 100) {
+            calorieProgressBar.classList.add('over');
         } else {
-            progressBar.classList.remove('over');
+            calorieProgressBar.classList.remove('over');
+        }
+
+        // Update macro progress bars
+        const proteinProgress = (totals.protein / this.settings.proteinGoal) * 100;
+        const proteinProgressBar = document.getElementById('proteinProgress');
+        proteinProgressBar.style.width = `${Math.min(proteinProgress, 100)}%`;
+        if (proteinProgress > 100) {
+            proteinProgressBar.classList.add('over');
+        } else {
+            proteinProgressBar.classList.remove('over');
+        }
+
+        const carbProgress = (totals.carbs / this.settings.carbGoal) * 100;
+        const carbProgressBar = document.getElementById('carbProgress');
+        carbProgressBar.style.width = `${Math.min(carbProgress, 100)}%`;
+        if (carbProgress > 100) {
+            carbProgressBar.classList.add('over');
+        } else {
+            carbProgressBar.classList.remove('over');
+        }
+
+        const fatProgress = (totals.fat / this.settings.fatGoal) * 100;
+        const fatProgressBar = document.getElementById('fatProgress');
+        fatProgressBar.style.width = `${Math.min(fatProgress, 100)}%`;
+        if (fatProgress > 100) {
+            fatProgressBar.classList.add('over');
+        } else {
+            fatProgressBar.classList.remove('over');
         }
 
         // Render food list grouped by meal type

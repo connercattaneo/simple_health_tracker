@@ -253,8 +253,14 @@ body {
 }
 
 .macro-value {
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.macro-progress {
+    height: 6px;
+    margin-top: 6px;
 }
 
 /* Food Log */
