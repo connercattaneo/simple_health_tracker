@@ -97,6 +97,7 @@ class HealthTracker {
             date: this.currentDate,
             rawInput: text,
             foodName: parsed.name,
+            dbFoodName: parsed.dbFoodName,
             quantity: parsed.quantity,
             unit: parsed.unit,
             calories: parsed.calories,
@@ -217,12 +218,14 @@ class HealthTracker {
 
         // Find matching food
         let foodData = foodDB[normalizedName];
+        let matchedFoodName = normalizedName;
 
         // Try partial matches if exact match not found
         if (!foodData) {
             for (const [key, value] of Object.entries(foodDB)) {
                 if (normalizedName.includes(key) || key.includes(normalizedName)) {
                     foodData = value;
+                    matchedFoodName = key;
                     break;
                 }
             }
@@ -231,6 +234,7 @@ class HealthTracker {
         // Default if not found
         if (!foodData) {
             foodData = { calories: 100, protein: 5, carbs: 10, fat: 3, per: 100 };
+            matchedFoodName = 'unknown food (estimated)';
         }
 
         // Calculate based on quantity
@@ -250,7 +254,8 @@ class HealthTracker {
             calories: Math.round(foodData.calories * multiplier),
             protein: Math.round(foodData.protein * multiplier * 10) / 10,
             carbs: Math.round(foodData.carbs * multiplier * 10) / 10,
-            fat: Math.round(foodData.fat * multiplier * 10) / 10
+            fat: Math.round(foodData.fat * multiplier * 10) / 10,
+            dbFoodName: matchedFoodName
         };
     }
 
@@ -260,6 +265,79 @@ class HealthTracker {
             this.data.foodEntries[this.currentDate] = entries.filter(e => e.id !== id);
             this.saveData();
             this.renderTodayView();
+        }
+    }
+
+    editFood(id) {
+        const entries = this.data.foodEntries[this.currentDate];
+        const entry = entries?.find(e => e.id === id);
+
+        if (!entry) return;
+
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>Edit Food Entry</h3>
+                <div class="modal-food-name">${entry.foodName}
+                    ${entry.dbFoodName ? `<span class="db-match">(${entry.dbFoodName})</span>` : ''}
+                </div>
+                <div class="modal-quantity">${entry.quantity}${entry.unit}</div>
+
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label>Calories</label>
+                        <input type="number" id="editCalories" value="${entry.calories}" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Protein (g)</label>
+                        <input type="number" id="editProtein" value="${entry.protein}" min="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Carbs (g)</label>
+                        <input type="number" id="editCarbs" value="${entry.carbs}" min="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Fat (g)</label>
+                        <input type="number" id="editFat" value="${entry.fat}" min="0" step="0.1">
+                    </div>
+                </div>
+
+                <div class="modal-buttons">
+                    <button class="btn-cancel" onclick="app.closeModal()">Cancel</button>
+                    <button class="btn-save" onclick="app.saveEditedFood(${id})">Save</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Focus first input
+        setTimeout(() => document.getElementById('editCalories').focus(), 100);
+    }
+
+    saveEditedFood(id) {
+        const entries = this.data.foodEntries[this.currentDate];
+        const entry = entries?.find(e => e.id === id);
+
+        if (!entry) return;
+
+        // Get updated values
+        entry.calories = parseInt(document.getElementById('editCalories').value) || 0;
+        entry.protein = parseFloat(document.getElementById('editProtein').value) || 0;
+        entry.carbs = parseFloat(document.getElementById('editCarbs').value) || 0;
+        entry.fat = parseFloat(document.getElementById('editFat').value) || 0;
+
+        this.saveData();
+        this.closeModal();
+        this.renderTodayView();
+    }
+
+    closeModal() {
+        const modal = document.querySelector('.modal');
+        if (modal) {
+            modal.remove();
         }
     }
 
@@ -346,7 +424,11 @@ class HealthTracker {
             foodList.innerHTML = entries.map(entry => `
                 <div class="food-item">
                     <div class="food-info">
-                        <div class="food-name">${entry.foodName}</div>
+                        <div class="food-name">
+                            ${entry.foodName}
+                            ${entry.dbFoodName && entry.dbFoodName !== entry.foodName.toLowerCase() ?
+                                `<span class="db-match">(${entry.dbFoodName})</span>` : ''}
+                        </div>
                         <div class="food-details">
                             ${entry.quantity}${entry.unit} •
                             P: ${Math.round(entry.protein)}g •
@@ -355,6 +437,7 @@ class HealthTracker {
                         </div>
                     </div>
                     <span class="food-calories">${entry.calories}</span>
+                    <button class="edit-btn" onclick="app.editFood(${entry.id})">✎</button>
                     <button class="delete-btn" onclick="app.deleteFood(${entry.id})">✕</button>
                 </div>
             `).join('');
