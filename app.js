@@ -448,12 +448,17 @@ class HealthTracker {
         // Always try external database first (USDA API)
         const searchResults = await this.searchFoodDatabase(parsed.name);
 
-        if (searchResults && searchResults.length > 1) {
-            // Show selection modal if multiple results
-            this.showFoodSelectionModal(searchResults, parsed.quantity, parsed.unit, text);
-        } else if (searchResults && searchResults.length === 1) {
-            // Use the single result
-            this.addFoodEntry(searchResults[0], parsed.quantity, parsed.unit, text);
+        if (searchResults && searchResults.length > 0) {
+            // Filter and rank results for better matching
+            const rankedResults = this.rankSearchResults(searchResults, parsed.name, parsed.unit);
+
+            // Auto-select if there's a clear best match
+            if (rankedResults.length === 1 || this.shouldAutoSelect(rankedResults, parsed.name)) {
+                this.addFoodEntry(rankedResults[0], parsed.quantity, parsed.unit, text);
+            } else {
+                // Show selection modal for multiple good matches
+                this.showFoodSelectionModal(rankedResults, parsed.quantity, parsed.unit, text);
+            }
         } else {
             // Only use local database as last resort fallback
             // This happens when API fails or no results found
@@ -466,6 +471,79 @@ class HealthTracker {
         }
 
         input.value = '';
+    }
+
+    rankSearchResults(results, searchTerm, unit) {
+        const searchLower = searchTerm.toLowerCase();
+
+        // Score and sort results
+        const scored = results.map(food => {
+            let score = 0;
+            const nameLower = food.foodName.toLowerCase();
+
+            // Exact match gets highest score
+            if (nameLower === searchLower) {
+                score += 100;
+            }
+
+            // Starts with search term
+            if (nameLower.startsWith(searchLower)) {
+                score += 50;
+            }
+
+            // Contains all words from search term
+            const searchWords = searchLower.split(/\s+/);
+            const matchedWords = searchWords.filter(word => nameLower.includes(word));
+            score += (matchedWords.length / searchWords.length) * 30;
+
+            // Prefer simpler/shorter names (less processing/preparation)
+            if (nameLower.includes('raw') || nameLower.includes('fresh')) {
+                score += 10;
+            }
+
+            // Penalize very long names (likely overly specific)
+            if (food.foodName.length > 80) {
+                score -= 10;
+            }
+
+            // For count-based queries, prefer items typically measured by count
+            if (unit === 'count') {
+                const countWords = ['egg', 'banana', 'apple', 'orange', 'slice', 'piece', 'patty', 'breast', 'thigh'];
+                if (countWords.some(word => nameLower.includes(word))) {
+                    score += 20;
+                }
+            }
+
+            return { ...food, score };
+        });
+
+        // Sort by score descending
+        scored.sort((a, b) => b.score - a.score);
+
+        // Return top 5 results
+        return scored.slice(0, 5);
+    }
+
+    shouldAutoSelect(rankedResults, searchTerm) {
+        if (rankedResults.length === 0) return false;
+        if (rankedResults.length === 1) return true;
+
+        // Auto-select if the top result has significantly higher score
+        const topScore = rankedResults[0].score;
+        const secondScore = rankedResults[1].score;
+
+        // If top result scores 20+ points higher, auto-select it
+        if (topScore - secondScore >= 20) {
+            return true;
+        }
+
+        // For very simple queries (1-2 words), be more conservative
+        const searchWords = searchTerm.toLowerCase().split(/\s+/);
+        if (searchWords.length <= 2 && topScore >= 80) {
+            return true;
+        }
+
+        return false;
     }
 
     addFoodEntry(foodData, quantity, unit, rawInput) {
@@ -498,10 +576,12 @@ class HealthTracker {
     }
 
     parseFood(text) {
-        // Simple parsing logic - can be enhanced with AI later
+        // Enhanced parsing logic to handle various input formats
         const patterns = {
-            // Pattern: "food name XXXg" or "food name XXX g"
+            // Pattern: "food name XXXg" or "food name XXX g" (e.g., "ground beef 200g")
             withGrams: /^(.+?)\s+(\d+\.?\d*)\s*g$/i,
+            // Pattern: "XXXg food name" or "XXX g food name" (e.g., "200g ground beef")
+            gramsFirst: /^(\d+\.?\d*)\s*g\s+(.+)$/i,
             // Pattern: "number food name" (e.g., "2 eggs")
             withCount: /^(\d+\.?\d*)\s+(.+)$/,
             // Pattern: just food name
@@ -516,6 +596,11 @@ class HealthTracker {
             const match = text.match(patterns.withGrams);
             name = match[1].trim();
             quantity = parseFloat(match[2]);
+            unit = 'g';
+        } else if (patterns.gramsFirst.test(text)) {
+            const match = text.match(patterns.gramsFirst);
+            quantity = parseFloat(match[1]);
+            name = match[2].trim();
             unit = 'g';
         } else if (patterns.withCount.test(text)) {
             const match = text.match(patterns.withCount);
@@ -625,14 +710,23 @@ class HealthTracker {
     selectFood(index, quantity, unit, rawInput) {
         const food = this.tempSearchResults[index];
 
-        // Calculate nutrition based on quantity
+        // Calculate nutrition based on quantity and unit type
         const servingSize = food.servingSize || 100;
+        const servingUnit = food.servingUnit || 'g';
         let multiplier = 1;
 
         if (unit === 'g') {
-            multiplier = quantity / servingSize;
+            // Weight-based: user entered grams
+            if (servingUnit === 'g') {
+                // Both in grams, simple division
+                multiplier = quantity / servingSize;
+            } else {
+                // Serving is in another unit (e.g., "1 egg"), assume 100g reference
+                multiplier = quantity / 100;
+            }
         } else if (unit === 'count') {
-            // Assume count is serving size
+            // Count-based: user entered number of items (e.g., "2 eggs")
+            // The nutrition info is typically per serving, multiply by count
             multiplier = quantity;
         }
 
