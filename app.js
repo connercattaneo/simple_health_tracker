@@ -3,7 +3,12 @@
 
 class HealthTracker {
     constructor() {
-        this.currentDate = new Date().toISOString().split('T')[0];
+        // Use local timezone date instead of UTC
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        this.currentDate = `${year}-${month}-${day}`;
         this.init();
     }
 
@@ -208,45 +213,46 @@ class HealthTracker {
         const codeReader = new ZXing.BrowserMultiFormatReader();
         const ctx = canvas.getContext('2d');
 
-        const scanFrame = async () => {
+        const scanFrame = () => {
             if (!this.barcodeStream) return;
 
             try {
                 // Set canvas size to match video
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                if (video.videoWidth > 0 && video.videoHeight > 0) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
 
-                // Draw current video frame to canvas
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    // Draw current video frame to canvas
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                // Try to decode barcode from canvas
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const result = await codeReader.decodeFromImageData(imageData);
+                    // Try to decode barcode from canvas
+                    const result = codeReader.decodeFromCanvas(canvas);
 
-                if (result) {
-                    const barcode = result.text;
-                    this.closeBarcodeScanner();
-                    await this.lookupBarcode(barcode);
-                    return;
+                    if (result) {
+                        const barcode = result.text;
+                        this.closeBarcodeScanner();
+                        this.lookupBarcode(barcode);
+                        return;
+                    }
                 }
             } catch (err) {
                 // No barcode found in this frame, continue scanning
             }
 
-            // Continue scanning
+            // Continue scanning at 10 FPS to reduce CPU usage
             if (this.barcodeStream) {
-                requestAnimationFrame(scanFrame);
+                setTimeout(() => requestAnimationFrame(scanFrame), 100);
             }
         };
 
         // Wait for video to be ready
         video.addEventListener('loadedmetadata', () => {
-            scanFrame();
+            setTimeout(() => scanFrame(), 500);
         });
 
         // Start immediately if video is already loaded
         if (video.readyState >= video.HAVE_METADATA) {
-            scanFrame();
+            setTimeout(() => scanFrame(), 500);
         }
     }
 
@@ -919,16 +925,24 @@ class HealthTracker {
 
     // Date Navigation
     changeDate(days) {
-        const date = new Date(this.currentDate);
+        const date = new Date(this.currentDate + 'T00:00:00');
         date.setDate(date.getDate() + days);
-        this.currentDate = date.toISOString().split('T')[0];
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        this.currentDate = `${year}-${month}-${day}`;
         this.updateDateDisplay();
         this.renderTodayView();
     }
 
     updateDateDisplay() {
-        const date = new Date(this.currentDate);
-        const today = new Date().toISOString().split('T')[0];
+        const date = new Date(this.currentDate + 'T00:00:00');
+        // Get today's date in local timezone
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const today = `${year}-${month}-${day}`;
 
         let displayText;
         if (this.currentDate === today) {
