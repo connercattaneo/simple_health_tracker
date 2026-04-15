@@ -57,6 +57,9 @@ class HealthTracker {
             if (e.key === 'Enter') this.addFood();
         });
 
+        // Barcode scanner
+        document.getElementById('scanBarcode').addEventListener('click', () => this.scanBarcode());
+
         // Weight input
         document.getElementById('addWeight').addEventListener('click', () => this.addWeight());
         document.getElementById('weightInput').addEventListener('keypress', (e) => {
@@ -82,6 +85,161 @@ class HealthTracker {
             document.getElementById('importFile').click();
         });
         document.getElementById('importFile').addEventListener('change', (e) => this.importData(e));
+    }
+
+    async scanBarcode() {
+        try {
+            // Check if browser supports Barcode Detection API
+            if (!('BarcodeDetector' in window)) {
+                alert('Barcode scanning not supported on this device. Try using the camera on a newer device or manually enter the food item.');
+                return;
+            }
+
+            // Request camera access
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }
+            });
+
+            // Create video element and scanner modal
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content barcode-scanner-modal">
+                    <h3>Scan Barcode</h3>
+                    <video id="scannerVideo" autoplay playsinline></video>
+                    <p class="scanner-instructions">Position barcode in the center</p>
+                    <button class="btn-cancel" onclick="app.closeBarcodeScanner()">Cancel</button>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            const video = document.getElementById('scannerVideo');
+            video.srcObject = stream;
+            this.barcodeStream = stream;
+
+            // Start barcode detection
+            const barcodeDetector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+
+            const detectBarcode = async () => {
+                try {
+                    const barcodes = await barcodeDetector.detect(video);
+
+                    if (barcodes.length > 0) {
+                        const barcode = barcodes[0].rawValue;
+                        this.closeBarcodeScanner();
+                        await this.lookupBarcode(barcode);
+                    } else if (this.barcodeStream) {
+                        // Continue scanning
+                        requestAnimationFrame(detectBarcode);
+                    }
+                } catch (err) {
+                    console.error('Barcode detection error:', err);
+                }
+            };
+
+            detectBarcode();
+
+        } catch (error) {
+            console.error('Camera access error:', error);
+            alert('Unable to access camera. Please check permissions or enter food manually.');
+        }
+    }
+
+    closeBarcodeScanner() {
+        if (this.barcodeStream) {
+            this.barcodeStream.getTracks().forEach(track => track.stop());
+            this.barcodeStream = null;
+        }
+        this.closeModal();
+    }
+
+    async lookupBarcode(barcode) {
+        try {
+            // Use Open Food Facts API to lookup barcode
+            const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+            const data = await response.json();
+
+            if (data.status === 1 && data.product) {
+                const product = data.product;
+
+                // Extract nutrition per 100g
+                const nutrients = product.nutriments || {};
+
+                const foodData = {
+                    foodName: product.product_name || 'Unknown Product',
+                    dbFoodName: product.product_name || 'Unknown Product',
+                    brandName: product.brands || '',
+                    calories: nutrients['energy-kcal_100g'] || nutrients['energy_100g'] / 4.184 || 0,
+                    protein: nutrients['proteins_100g'] || 0,
+                    carbs: nutrients['carbohydrates_100g'] || 0,
+                    fat: nutrients['fat_100g'] || 0,
+                    servingSize: product.serving_size || 100,
+                    servingUnit: 'g'
+                };
+
+                // Show confirmation modal with product info
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <h3>Scanned Product</h3>
+                        <div class="modal-food-name">${foodData.foodName}</div>
+                        ${foodData.brandName ? `<div class="result-brand">${foodData.brandName}</div>` : ''}
+                        <div class="result-nutrition">
+                            ${Math.round(foodData.calories)} cal •
+                            P: ${Math.round(foodData.protein)}g •
+                            C: ${Math.round(foodData.carbs)}g •
+                            F: ${Math.round(foodData.fat)}g
+                            (per 100g)
+                        </div>
+                        <div class="form-group" style="margin-top: 20px;">
+                            <label>Quantity (grams)</label>
+                            <input type="number" id="barcodeQuantity" value="100" min="1">
+                        </div>
+                        <div class="modal-buttons">
+                            <button class="btn-cancel" onclick="app.closeModal()">Cancel</button>
+                            <button class="btn-save" onclick="app.addScannedFood()">Add Food</button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+
+                // Store scanned food data temporarily
+                this.scannedFoodData = foodData;
+
+                // Focus quantity input
+                setTimeout(() => document.getElementById('barcodeQuantity').focus(), 100);
+
+            } else {
+                alert('Product not found in database. Please enter manually.');
+            }
+        } catch (error) {
+            console.error('Barcode lookup error:', error);
+            alert('Error looking up product. Please enter manually.');
+        }
+    }
+
+    addScannedFood() {
+        const quantity = parseFloat(document.getElementById('barcodeQuantity').value) || 100;
+        const food = this.scannedFoodData;
+
+        // Calculate nutrition based on quantity
+        const multiplier = quantity / 100;
+
+        const nutritionData = {
+            foodName: food.foodName,
+            dbFoodName: food.foodName + (food.brandName ? ` (${food.brandName})` : ''),
+            calories: Math.round(food.calories * multiplier),
+            protein: Math.round(food.protein * multiplier * 10) / 10,
+            carbs: Math.round(food.carbs * multiplier * 10) / 10,
+            fat: Math.round(food.fat * multiplier * 10) / 10
+        };
+
+        this.addFoodEntry(nutritionData, quantity, 'g', food.foodName);
+        this.closeModal();
+        delete this.scannedFoodData;
     }
 
     // Food Entry
@@ -305,6 +463,11 @@ class HealthTracker {
             'greek yogurt': { calories: 97, protein: 10, carbs: 3.6, fat: 5, per: 100 },
             'steak': { calories: 271, protein: 25, carbs: 0, fat: 19, per: 100 },
             'ground beef': { calories: 250, protein: 26, carbs: 0, fat: 17, per: 100 },
+            'ground beef 80/20': { calories: 254, protein: 25, carbs: 0, fat: 18, per: 100 },
+            'ground beef 85/15': { calories: 215, protein: 26, carbs: 0, fat: 13, per: 100 },
+            'ground beef 90/10': { calories: 176, protein: 26, carbs: 0, fat: 10, per: 100 },
+            'ground beef 93/7': { calories: 152, protein: 27, carbs: 0, fat: 7, per: 100 },
+            'ground beef 88/12': { calories: 185, protein: 26, carbs: 0, fat: 11, per: 100 },
             'turkey': { calories: 135, protein: 30, carbs: 0, fat: 1, per: 100 },
             'pork chop': { calories: 231, protein: 23, carbs: 0, fat: 15, per: 100 },
 
@@ -349,8 +512,18 @@ class HealthTracker {
             'pizza': { calories: 266, protein: 11, carbs: 33, fat: 10, per: 100 },
         };
 
-        // Normalize food name
-        const normalizedName = foodName.toLowerCase().trim();
+        // Normalize food name and handle special patterns (like "88/12")
+        let normalizedName = foodName.toLowerCase().trim();
+
+        // Handle lean percentage patterns (e.g., "ground beef 88/12" or "88/12 ground beef")
+        const leanPattern = /(\d{2,3}\/\d{1,2})/;
+        const leanMatch = normalizedName.match(leanPattern);
+        if (leanMatch) {
+            // Rearrange to standard format: "food name XX/XX"
+            const leanPart = leanMatch[1];
+            const baseName = normalizedName.replace(leanPattern, '').trim();
+            normalizedName = `${baseName} ${leanPart}`.trim();
+        }
 
         // Find matching food
         let foodData = foodDB[normalizedName];
@@ -492,7 +665,24 @@ class HealthTracker {
 
         this.saveData();
         input.value = '';
+
+        // Hide weight section after logging
+        this.updateWeightSectionVisibility();
+
         alert(`Weight logged: ${weight} lbs`);
+    }
+
+    updateWeightSectionVisibility() {
+        const weightSection = document.querySelector('.weight-section');
+        const today = new Date().toISOString().split('T')[0];
+
+        if (this.currentDate === today && this.data.weightEntries[this.currentDate]) {
+            // Hide if weight already logged for today
+            weightSection.style.display = 'none';
+        } else {
+            // Show if viewing another day or no weight logged today
+            weightSection.style.display = 'flex';
+        }
     }
 
     // Date Navigation
@@ -578,6 +768,9 @@ class HealthTracker {
                 </div>
             `).join('');
         }
+
+        // Update weight section visibility
+        this.updateWeightSectionVisibility();
     }
 
     renderTrendsView() {
@@ -628,24 +821,153 @@ class HealthTracker {
     }
 
     renderSimpleCharts() {
-        // Simple text-based charts for now
-        const weightCanvas = document.getElementById('weightChart');
-        const calorieCanvas = document.getElementById('calorieChart');
+        this.renderWeightChart();
+        this.renderCalorieChart();
+    }
 
-        // We'll add proper chart rendering later or use a lightweight library
-        const ctx1 = weightCanvas.getContext('2d');
-        const ctx2 = calorieCanvas.getContext('2d');
+    renderWeightChart() {
+        const canvas = document.getElementById('weightChart');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
 
-        // Clear canvases
-        ctx1.clearRect(0, 0, weightCanvas.width, weightCanvas.height);
-        ctx2.clearRect(0, 0, calorieCanvas.width, calorieCanvas.height);
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
 
-        // Simple placeholder text
-        ctx1.font = '14px Arial';
-        ctx1.fillText('Weight trend chart - coming soon', 10, 50);
+        // Get weight data for last 30 days
+        const last30Days = this.getLast30Days();
+        const weightData = last30Days.map(date => ({
+            date,
+            weight: this.data.weightEntries[date]?.weight || null
+        })).filter(d => d.weight !== null);
 
-        ctx2.font = '14px Arial';
-        ctx2.fillText('Calorie trend chart - coming soon', 10, 50);
+        if (weightData.length === 0) {
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#8E8E93';
+            ctx.fillText('No weight data yet', width / 2 - 60, height / 2);
+            return;
+        }
+
+        // Calculate min/max for scaling
+        const weights = weightData.map(d => d.weight);
+        const minWeight = Math.min(...weights) - 2;
+        const maxWeight = Math.max(...weights) + 2;
+        const range = maxWeight - minWeight;
+
+        // Chart dimensions
+        const padding = 40;
+        const chartWidth = width - padding * 2;
+        const chartHeight = height - padding * 2;
+
+        // Draw axes
+        ctx.strokeStyle = '#C6C6C8';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, padding);
+        ctx.lineTo(padding, height - padding);
+        ctx.lineTo(width - padding, height - padding);
+        ctx.stroke();
+
+        // Draw line chart
+        ctx.strokeStyle = '#007AFF';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        weightData.forEach((point, index) => {
+            const x = padding + (chartWidth / (weightData.length - 1 || 1)) * index;
+            const y = height - padding - ((point.weight - minWeight) / range) * chartHeight;
+
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+
+        ctx.stroke();
+
+        // Draw points
+        ctx.fillStyle = '#007AFF';
+        weightData.forEach((point, index) => {
+            const x = padding + (chartWidth / (weightData.length - 1 || 1)) * index;
+            const y = height - padding - ((point.weight - minWeight) / range) * chartHeight;
+
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Draw labels
+        ctx.fillStyle = '#000';
+        ctx.font = '12px Arial';
+        ctx.fillText(`${Math.round(maxWeight)} lbs`, 5, padding + 5);
+        ctx.fillText(`${Math.round(minWeight)} lbs`, 5, height - padding - 5);
+    }
+
+    renderCalorieChart() {
+        const canvas = document.getElementById('calorieChart');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+
+        // Get calorie data for last 7 days
+        const last7Days = this.getLast7Days();
+        const calorieData = last7Days.map(date => {
+            const entries = this.data.foodEntries[date] || [];
+            const totalCals = entries.reduce((sum, e) => sum + e.calories, 0);
+            return { date, calories: totalCals };
+        });
+
+        // Calculate max for scaling
+        const maxCalories = Math.max(...calorieData.map(d => d.calories), this.settings.calorieGoal);
+
+        // Chart dimensions
+        const padding = 40;
+        const chartWidth = width - padding * 2;
+        const chartHeight = height - padding * 2;
+        const barWidth = chartWidth / 7 - 10;
+
+        // Draw axes
+        ctx.strokeStyle = '#C6C6C8';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, padding);
+        ctx.lineTo(padding, height - padding);
+        ctx.lineTo(width - padding, height - padding);
+        ctx.stroke();
+
+        // Draw goal line
+        const goalY = height - padding - (this.settings.calorieGoal / maxCalories) * chartHeight;
+        ctx.strokeStyle = '#FF3B30';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(padding, goalY);
+        ctx.lineTo(width - padding, goalY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw bars
+        calorieData.forEach((point, index) => {
+            const x = padding + index * (chartWidth / 7) + 5;
+            const barHeight = (point.calories / maxCalories) * chartHeight;
+            const y = height - padding - barHeight;
+
+            ctx.fillStyle = point.calories > this.settings.calorieGoal ? '#FF9500' : '#34C759';
+            ctx.fillRect(x, y, barWidth, barHeight);
+        });
+
+        // Draw labels
+        ctx.fillStyle = '#000';
+        ctx.font = '10px Arial';
+        last7Days.forEach((date, index) => {
+            const x = padding + index * (chartWidth / 7);
+            const label = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
+            ctx.fillText(label, x, height - padding + 15);
+        });
     }
 
     renderSettingsView() {
