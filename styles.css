@@ -754,3 +754,84 @@ canvas {
     color: var(--text-primary);
     cursor: pointer;
 }
+
+/* Food Log Header */
+.food-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.btn-sm {
+    font-size: 14px;
+    padding: 8px 12px;
+}
+
+/* Copy Meal Modal */
+.copy-meal-modal {
+    max-width: 500px;
+}
+
+.copy-meal-list {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 16px 0;
+}
+
+.copy-date-group {
+    margin-bottom: 20px;
+}
+
+.copy-date-group h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.copy-meal-option {
+    padding: 12px;
+    margin-bottom: 8px;
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.copy-meal-option:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateX(4px);
+}
+
+.copy-meal-label {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.copy-meal-items {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.copy-meal-option:hover .copy-meal-items {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.copy-meal-calories {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.copy-meal-option:hover .copy-meal-calories {
+    color: white;
+}

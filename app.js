@@ -86,6 +86,9 @@ class HealthTracker {
         document.getElementById('prevDay').addEventListener('click', () => this.changeDate(-1));
         document.getElementById('nextDay').addEventListener('click', () => this.changeDate(1));
 
+        // Copy meal functionality
+        document.getElementById('copyMealBtn').addEventListener('click', () => this.showCopyMealModal());
+
         // Bottom navigation
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -767,6 +770,116 @@ class HealthTracker {
         if (modal) {
             modal.remove();
         }
+    }
+
+    // Copy Meal Functionality
+    showCopyMealModal() {
+        // Get dates from last 7 days
+        const dates = [];
+        for (let i = 1; i <= 7; i++) {
+            const date = new Date(this.currentDate);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            if (this.data.foodEntries[dateStr] && this.data.foodEntries[dateStr].length > 0) {
+                dates.push({
+                    date: dateStr,
+                    display: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+                    entries: this.data.foodEntries[dateStr]
+                });
+            }
+        }
+
+        if (dates.length === 0) {
+            alert('No previous meals found in the last 7 days');
+            return;
+        }
+
+        // Group entries by meal type for each date
+        const dateOptions = dates.map(d => {
+            const mealGroups = {
+                breakfast: d.entries.filter(e => e.mealType === 'breakfast'),
+                lunch: d.entries.filter(e => e.mealType === 'lunch'),
+                dinner: d.entries.filter(e => e.mealType === 'dinner'),
+                snack: d.entries.filter(e => e.mealType === 'snack' || !e.mealType)
+            };
+
+            const mealLabels = {
+                breakfast: '🍳 Breakfast',
+                lunch: '🥗 Lunch',
+                dinner: '🍽️ Dinner',
+                snack: '🍎 Snacks'
+            };
+
+            let mealsHtml = '';
+            for (const [mealType, meals] of Object.entries(mealGroups)) {
+                if (meals.length > 0) {
+                    const totalCals = meals.reduce((sum, e) => sum + e.calories, 0);
+                    mealsHtml += `
+                        <div class="copy-meal-option" onclick="app.copyMeal('${d.date}', '${mealType}')">
+                            <div class="copy-meal-label">${mealLabels[mealType]}</div>
+                            <div class="copy-meal-items">${meals.map(e => e.foodName).join(', ')}</div>
+                            <div class="copy-meal-calories">${totalCals} cal</div>
+                        </div>
+                    `;
+                }
+            }
+
+            return `
+                <div class="copy-date-group">
+                    <h4>${d.display}</h4>
+                    ${mealsHtml}
+                </div>
+            `;
+        }).join('');
+
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content copy-meal-modal">
+                <h3>Copy Meal from Previous Day</h3>
+                <p class="help-text">Select a meal to copy to today</p>
+                <div class="copy-meal-list">
+                    ${dateOptions}
+                </div>
+                <button class="btn-cancel" onclick="app.closeModal()">Cancel</button>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    }
+
+    copyMeal(fromDate, mealType) {
+        const sourceEntries = this.data.foodEntries[fromDate].filter(e => e.mealType === mealType);
+
+        if (sourceEntries.length === 0) return;
+
+        // Create new entries for today
+        sourceEntries.forEach(entry => {
+            const newEntry = {
+                ...entry,
+                id: Date.now() + Math.random(),  // Unique ID
+                date: this.currentDate,
+                timestamp: new Date().toISOString()
+            };
+
+            if (!this.data.foodEntries[this.currentDate]) {
+                this.data.foodEntries[this.currentDate] = [];
+            }
+            this.data.foodEntries[this.currentDate].push(newEntry);
+        });
+
+        this.saveData();
+        this.closeModal();
+        this.renderTodayView();
+
+        const mealLabels = {
+            breakfast: 'Breakfast',
+            lunch: 'Lunch',
+            dinner: 'Dinner',
+            snack: 'Snacks'
+        };
+
+        alert(`${mealLabels[mealType]} copied successfully!`);
     }
 
     // Weight Entry
