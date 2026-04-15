@@ -445,7 +445,22 @@ class HealthTracker {
 
         const parsed = this.parseFood(text);
 
-        // Always try external database first (USDA API)
+        // Try AI-enhanced search first if GitHub token is available
+        const githubToken = localStorage.getItem('githubToken');
+        if (githubToken) {
+            try {
+                const aiResult = await this.aiEnhancedFoodSearch(parsed.name, parsed.quantity, parsed.unit, githubToken);
+                if (aiResult) {
+                    this.addFoodEntry(aiResult, parsed.quantity, parsed.unit, text);
+                    input.value = '';
+                    return;
+                }
+            } catch (error) {
+                console.log('AI search failed, falling back to standard search:', error);
+            }
+        }
+
+        // Fallback to standard USDA API search
         const searchResults = await this.searchFoodDatabase(parsed.name);
 
         if (searchResults && searchResults.length > 0) {
@@ -471,6 +486,96 @@ class HealthTracker {
         }
 
         input.value = '';
+    }
+
+    async aiEnhancedFoodSearch(foodName, quantity, unit, githubToken) {
+        try {
+            // Use GitHub Models API (free with GitHub Pro+) to intelligently parse and match
+            const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${githubToken}`
+                },
+                body: JSON.stringify({
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are a nutrition expert. Given a food description, return the most accurate common food name that would match in a USDA nutrition database, along with a realistic serving size in grams for the described quantity. Return ONLY valid JSON with no markdown formatting.'
+                        },
+                        {
+                            role: 'user',
+                            content: `Food: "${foodName}", Quantity: ${quantity} ${unit}. Return JSON: {"searchTerm": "best USDA search term", "servingGrams": number, "explanation": "brief reason"}`
+                        }
+                    ],
+                    model: 'gpt-4o-mini',
+                    temperature: 0.3,
+                    max_tokens: 150
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`AI API failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const content = data.choices[0].message.content.trim();
+
+            // Parse JSON from response (handle potential markdown wrapping)
+            let aiSuggestion;
+            try {
+                // Remove markdown code blocks if present
+                const jsonMatch = content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    aiSuggestion = JSON.parse(jsonMatch[0]);
+                } else {
+                    aiSuggestion = JSON.parse(content);
+                }
+            } catch (e) {
+                console.error('Failed to parse AI response:', content);
+                return null;
+            }
+
+            console.log('AI suggestion:', aiSuggestion);
+
+            // Search USDA with AI-suggested term
+            const searchResults = await this.searchFoodDatabase(aiSuggestion.searchTerm);
+
+            if (searchResults && searchResults.length > 0) {
+                // Rank results but prefer those close to AI's suggested serving size
+                const rankedResults = this.rankSearchResults(searchResults, aiSuggestion.searchTerm, unit);
+
+                // Pick the best match considering serving size
+                let bestMatch = rankedResults[0];
+                const targetGrams = aiSuggestion.servingGrams || 100;
+
+                // If AI suggested a specific serving size, try to find a match with similar size
+                for (const result of rankedResults.slice(0, 3)) {
+                    const servingSize = result.servingSize || 100;
+                    if (Math.abs(servingSize - targetGrams) < Math.abs((bestMatch.servingSize || 100) - targetGrams)) {
+                        bestMatch = result;
+                    }
+                }
+
+                // Calculate nutrition based on AI's suggested serving size
+                const servingSize = bestMatch.servingSize || 100;
+                const multiplier = targetGrams / servingSize;
+
+                return {
+                    foodName: bestMatch.foodName,
+                    dbFoodName: `${bestMatch.foodName} (AI-matched)`,
+                    calories: Math.round(bestMatch.calories * multiplier),
+                    protein: Math.round(bestMatch.protein * multiplier * 10) / 10,
+                    carbs: Math.round(bestMatch.carbs * multiplier * 10) / 10,
+                    fat: Math.round(bestMatch.fat * multiplier * 10) / 10
+                };
+            }
+
+            return null;
+        } catch (error) {
+            console.error('AI-enhanced search error:', error);
+            return null;
+        }
     }
 
     rankSearchResults(results, searchTerm, unit) {
@@ -1548,9 +1653,12 @@ class HealthTracker {
         document.getElementById('carbPercentInput').value = this.settings.carbPercent || 40;
         document.getElementById('fatPercentInput').value = this.settings.fatPercent || 30;
 
-        // Load API key (show placeholder if using DEMO_KEY)
+        // Load API keys
         const apiKey = localStorage.getItem('usdaApiKey');
         document.getElementById('apiKeyInput').value = apiKey || '';
+
+        const githubToken = localStorage.getItem('githubToken');
+        document.getElementById('githubTokenInput').value = githubToken || '';
     }
 
     // View Switching
@@ -1617,12 +1725,19 @@ class HealthTracker {
 
         this.saveSettings();
 
-        // Save API key to localStorage (not in settings file for security)
+        // Save API keys to localStorage (not in settings file for security)
         const apiKey = document.getElementById('apiKeyInput').value.trim();
         if (apiKey) {
             localStorage.setItem('usdaApiKey', apiKey);
         } else {
             localStorage.removeItem('usdaApiKey');
+        }
+
+        const githubToken = document.getElementById('githubTokenInput').value.trim();
+        if (githubToken) {
+            localStorage.setItem('githubToken', githubToken);
+        } else {
+            localStorage.removeItem('githubToken');
         }
 
         document.getElementById('goalCalories').textContent = this.settings.calorieGoal;

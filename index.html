@@ -160,6 +160,24 @@
             </div>
 
             <div class="settings-group">
+                <h3>AI-Enhanced Food Matching (Recommended)</h3>
+                <label for="githubTokenInput">GitHub Personal Access Token</label>
+                <input type="password" id="githubTokenInput" placeholder="github_pat_...">
+                <p class="help-text">
+                    <strong>Get accurate food matching with AI!</strong><br>
+                    With GitHub Pro+, you get free access to GitHub Models (GPT-4o-mini).<br>
+                    1. Go to <a href="https://github.com/settings/tokens?type=beta" target="_blank">GitHub Settings → Developer Settings → Personal Access Tokens (Beta)</a><br>
+                    2. Click "Generate new token"<br>
+                    3. Give it a name like "Health Tracker"<br>
+                    4. Set expiration (or no expiration)<br>
+                    5. No special permissions needed - leave all unchecked<br>
+                    6. Copy and paste the token here<br>
+                    <br>
+                    <strong>Why?</strong> AI understands "1 banana" should be ~105 calories (118g), not 312. It intelligently maps your input to the right USDA entry.
+                </p>
+            </div>
+
+            <div class="settings-group">
                 <h3>USDA API Configuration</h3>
                 <label for="apiKeyInput">USDA FoodData Central API Key (Optional)</label>
                 <input type="password" id="apiKeyInput" placeholder="Enter your API key">
