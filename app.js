@@ -473,7 +473,8 @@ class HealthTracker {
 
                 // Auto-select if there's a clear best match
                 if (rankedResults.length === 1 || this.shouldAutoSelect(rankedResults, parsed.name)) {
-                    this.addFoodEntry(rankedResults[0], parsed.quantity, parsed.unit, text);
+                    const scaledNutrition = this.scaleNutritionToQuantity(rankedResults[0], parsed.quantity, parsed.unit);
+                    this.addFoodEntry(scaledNutrition, parsed.quantity, parsed.unit, text);
                 } else {
                     // Show selection modal for multiple good matches
                     this.showFoodSelectionModal(rankedResults, parsed.quantity, parsed.unit, text);
@@ -722,6 +723,30 @@ class HealthTracker {
         this.renderTodayView();
     }
 
+    // Helper method to scale USDA nutrition values (which are per 100g) to user's quantity
+    scaleNutritionToQuantity(foodData, quantity, unit) {
+        let multiplier = 1;
+
+        if (unit === 'g') {
+            // USDA values are per 100g, so scale to user's grams
+            multiplier = quantity / 100;
+        } else if (unit === 'count') {
+            // For count-based (e.g., "2 eggs"), the servingSize indicates typical item weight
+            // Multiply nutrition (per 100g) by (servingSize/100) * count
+            const itemWeight = foodData.servingSize || 100;
+            multiplier = (itemWeight / 100) * quantity;
+        }
+
+        return {
+            foodName: foodData.foodName,
+            dbFoodName: foodData.dbFoodName || foodData.foodName,
+            calories: Math.round(foodData.calories * multiplier),
+            protein: Math.round(foodData.protein * multiplier * 10) / 10,
+            carbs: Math.round(foodData.carbs * multiplier * 10) / 10,
+            fat: Math.round(foodData.fat * multiplier * 10) / 10
+        };
+    }
+
     parseFood(text) {
         // Enhanced parsing logic to handle various input formats
         const patterns = {
@@ -857,34 +882,8 @@ class HealthTracker {
     selectFood(index, quantity, unit, rawInput) {
         const food = this.tempSearchResults[index];
 
-        // Calculate nutrition based on quantity and unit type
-        const servingSize = food.servingSize || 100;
-        const servingUnit = food.servingUnit || 'g';
-        let multiplier = 1;
-
-        if (unit === 'g') {
-            // Weight-based: user entered grams
-            if (servingUnit === 'g') {
-                // Both in grams, simple division
-                multiplier = quantity / servingSize;
-            } else {
-                // Serving is in another unit (e.g., "1 egg"), assume 100g reference
-                multiplier = quantity / 100;
-            }
-        } else if (unit === 'count') {
-            // Count-based: user entered number of items (e.g., "2 eggs")
-            // The nutrition info is typically per serving, multiply by count
-            multiplier = quantity;
-        }
-
-        const nutritionData = {
-            foodName: food.foodName,
-            dbFoodName: food.foodName,
-            calories: Math.round(food.calories * multiplier),
-            protein: Math.round(food.protein * multiplier * 10) / 10,
-            carbs: Math.round(food.carbs * multiplier * 10) / 10,
-            fat: Math.round(food.fat * multiplier * 10) / 10
-        };
+        // Scale nutrition from USDA (per 100g) to user's quantity
+        const nutritionData = this.scaleNutritionToQuantity(food, quantity, unit);
 
         this.addFoodEntry(nutritionData, quantity, unit, rawInput);
         this.closeModal();
