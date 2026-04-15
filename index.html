@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Health Tracker">
+    <title>Simple Health Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Health Tracker</h1>
+            <div class="date-selector">
+                <button id="prevDay" class="date-nav">‹</button>
+                <span id="currentDate"></span>
+                <button id="nextDay" class="date-nav">›</button>
+            </div>
+        </header>
+
+        <!-- Quick Input -->
+        <section class="quick-input">
+            <input
+                type="text"
+                id="foodInput"
+                placeholder="e.g., chicken breast 220g, 2 eggs, banana"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+            >
+            <button id="addFood">Add</button>
+        </section>
+
+        <!-- Weight Input -->
+        <section class="weight-section">
+            <input
+                type="number"
+                id="weightInput"
+                placeholder="Weight (lbs)"
+                step="0.1"
+            >
+            <button id="addWeight">Log Weight</button>
+        </section>
+
+        <!-- Daily Summary -->
+        <section class="daily-summary">
+            <div class="goals-display">
+                <div class="goal-item">
+                    <div class="goal-label">Calories</div>
+                    <div class="goal-value">
+                        <span id="currentCalories">0</span> / <span id="goalCalories">2000</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="calorieProgress" class="progress-fill"></div>
+                    </div>
+                </div>
+                <div class="macros-grid">
+                    <div class="macro-item">
+                        <div class="macro-label">Protein</div>
+                        <div class="macro-value"><span id="currentProtein">0</span>g</div>
+                    </div>
+                    <div class="macro-item">
+                        <div class="macro-label">Carbs</div>
+                        <div class="macro-value"><span id="currentCarbs">0</span>g</div>
+                    </div>
+                    <div class="macro-item">
+                        <div class="macro-label">Fat</div>
+                        <div class="macro-value"><span id="currentFat">0</span>g</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Food Log -->
+        <section class="food-log">
+            <h2>Today's Foods</h2>
+            <div id="foodList" class="food-list"></div>
+        </section>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-btn active" data-view="today">
+                <span class="nav-icon">🍎</span>
+                <span class="nav-label">Today</span>
+            </button>
+            <button class="nav-btn" data-view="trends">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Trends</span>
+            </button>
+            <button class="nav-btn" data-view="settings">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Settings</span>
+            </button>
+        </nav>
+
+        <!-- Trends View (hidden by default) -->
+        <section id="trendsView" class="view-section hidden">
+            <h2>Trends</h2>
+            <div class="chart-container">
+                <h3>Weight Trend (Last 30 Days)</h3>
+                <canvas id="weightChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Calorie Intake (Last 7 Days)</h3>
+                <canvas id="calorieChart"></canvas>
+            </div>
+            <div class="stats-summary">
+                <div class="stat-card">
+                    <div class="stat-label">Current Weight</div>
+                    <div class="stat-value" id="currentWeight">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">7-Day Avg Calories</div>
+                    <div class="stat-value" id="avgCalories">--</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings View (hidden by default) -->
+        <section id="settingsView" class="view-section hidden">
+            <h2>Settings</h2>
+            <div class="settings-group">
+                <label for="calorieGoalInput">Daily Calorie Goal</label>
+                <input type="number" id="calorieGoalInput" placeholder="2000">
+            </div>
+            <div class="settings-group">
+                <label for="proteinGoalInput">Protein Goal (g)</label>
+                <input type="number" id="proteinGoalInput" placeholder="150">
+            </div>
+            <div class="settings-group">
+                <label for="carbGoalInput">Carbs Goal (g)</label>
+                <input type="number" id="carbGoalInput" placeholder="200">
+            </div>
+            <div class="settings-group">
+                <label for="fatGoalInput">Fat Goal (g)</label>
+                <input type="number" id="fatGoalInput" placeholder="65">
+            </div>
+            <button id="saveSettings" class="btn-primary">Save Goals</button>
+
+            <div class="settings-group">
+                <h3>Data Management</h3>
+                <button id="exportData" class="btn-secondary">Export Data</button>
+                <button id="importData" class="btn-secondary">Import Data</button>
+                <input type="file" id="importFile" accept=".json" style="display: none;">
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

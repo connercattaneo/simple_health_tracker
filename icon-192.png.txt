@@ -1,0 +1,4 @@
+# Placeholder for icon-192.png
+# To generate proper icons, open create-icons.html in a browser
+# Right-click each canvas and save as icon-192.png and icon-512.png
+# Or use any 192x192 and 512x512 PNG images

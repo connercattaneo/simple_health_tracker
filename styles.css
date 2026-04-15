@@ -1,0 +1,460 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #007AFF;
+    --secondary-color: #34C759;
+    --danger-color: #FF3B30;
+    --background: #F2F2F7;
+    --card-background: #FFFFFF;
+    --text-primary: #000000;
+    --text-secondary: #8E8E93;
+    --border-color: #C6C6C8;
+    --success-color: #34C759;
+    --warning-color: #FF9500;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: var(--background);
+    color: var(--text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 80px;
+}
+
+.app-container {
+    max-width: 600px;
+    margin: 0 auto;
+    min-height: 100vh;
+}
+
+/* Header */
+.header {
+    background: var(--card-background);
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.date-selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.date-nav {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--primary-color);
+    cursor: pointer;
+    padding: 8px;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.date-nav:active {
+    opacity: 0.5;
+}
+
+#currentDate {
+    font-size: 16px;
+    font-weight: 500;
+    min-width: 150px;
+    text-align: center;
+}
+
+/* Quick Input */
+.quick-input {
+    background: var(--card-background);
+    padding: 16px;
+    margin: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: flex;
+    gap: 8px;
+}
+
+#foodInput {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+#foodInput:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.quick-input button,
+.weight-section button {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.quick-input button:active,
+.weight-section button:active {
+    opacity: 0.7;
+}
+
+/* Weight Section */
+.weight-section {
+    background: var(--card-background);
+    padding: 16px;
+    margin: 0 16px 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: flex;
+    gap: 8px;
+}
+
+#weightInput {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+#weightInput:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* Daily Summary */
+.daily-summary {
+    background: var(--card-background);
+    padding: 20px;
+    margin: 0 16px 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.goal-item {
+    margin-bottom: 20px;
+}
+
+.goal-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.goal-value {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.progress-bar {
+    height: 8px;
+    background: var(--background);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--success-color);
+    transition: width 0.3s ease;
+}
+
+.progress-fill.over {
+    background: var(--warning-color);
+}
+
+.macros-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.macro-item {
+    text-align: center;
+    padding: 12px;
+    background: var(--background);
+    border-radius: 8px;
+}
+
+.macro-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.macro-value {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+/* Food Log */
+.food-log {
+    background: var(--card-background);
+    padding: 20px;
+    margin: 0 16px 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.food-log h2 {
+    font-size: 20px;
+    margin-bottom: 16px;
+}
+
+.food-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.food-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: var(--background);
+    border-radius: 8px;
+}
+
+.food-info {
+    flex: 1;
+}
+
+.food-name {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.food-details {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.food-calories {
+    font-size: 18px;
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+.delete-btn {
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.delete-btn:active {
+    opacity: 0.7;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--card-background);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-around;
+    padding: 8px;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    min-width: 44px;
+}
+
+.nav-btn.active {
+    color: var(--primary-color);
+}
+
+.nav-icon {
+    font-size: 24px;
+}
+
+.nav-label {
+    font-size: 12px;
+}
+
+/* View Sections */
+.view-section {
+    padding: 20px;
+    margin: 0 16px 16px;
+}
+
+.view-section.hidden {
+    display: none;
+}
+
+.view-section h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.view-section h3 {
+    font-size: 18px;
+    margin-bottom: 12px;
+    margin-top: 20px;
+}
+
+/* Charts */
+.chart-container {
+    background: var(--card-background);
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+canvas {
+    max-width: 100%;
+}
+
+.stats-summary {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.stat-card {
+    background: var(--card-background);
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+/* Settings */
+.settings-group {
+    background: var(--card-background);
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 16px;
+}
+
+.settings-group label {
+    display: block;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.settings-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.settings-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.btn-primary,
+.btn-secondary {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 12px;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-secondary {
+    background: var(--background);
+    color: var(--text-primary);
+}
+
+.btn-primary:active,
+.btn-secondary:active {
+    opacity: 0.7;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .app-container {
+        max-width: 100%;
+    }
+}
+
+/* Safe area insets for iPhone notch */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    body {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .bottom-nav {
+        padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    }
+}

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head><title>Icon Generator</title></head>
+<body>
+<canvas id="canvas192" width="192" height="192"></canvas>
+<canvas id="canvas512" width="512" height="512"></canvas>
+<script>
+function createIcon(canvasId, size) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+
+    // Background
+    ctx.fillStyle = '#007AFF';
+    ctx.fillRect(0, 0, size, size);
+
+    // Apple emoji
+    ctx.font = (size * 0.6) + 'px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🍎', size / 2, size / 2);
+}
+
+createIcon('canvas192', 192);
+createIcon('canvas512', 512);
+
+document.body.insertAdjacentHTML('beforeend', '<p>Right-click each canvas and save as icon-192.png and icon-512.png</p>');
+</script>
+</body>
+</html>
