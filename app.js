@@ -169,8 +169,22 @@ class HealthTracker {
             'greek yogurt': { calories: 97, protein: 10, carbs: 3.6, fat: 5, per: 100 },
             'steak': { calories: 271, protein: 25, carbs: 0, fat: 19, per: 100 },
             'ground beef': { calories: 250, protein: 26, carbs: 0, fat: 17, per: 100 },
+            'ground beef 80/20': { calories: 254, protein: 25, carbs: 0, fat: 18, per: 100 },
+            'ground beef 85/15': { calories: 215, protein: 26, carbs: 0, fat: 13, per: 100 },
+            'ground beef 90/10': { calories: 176, protein: 26, carbs: 0, fat: 10, per: 100 },
+            'ground beef 93/7': { calories: 152, protein: 26, carbs: 0, fat: 7, per: 100 },
+            'ground beef 95/5': { calories: 145, protein: 26, carbs: 0, fat: 5.5, per: 100 },
+            'ground beef 88/12': { calories: 190, protein: 26, carbs: 0, fat: 12, per: 100 },
+            'lean ground beef': { calories: 176, protein: 26, carbs: 0, fat: 10, per: 100 },
             'turkey': { calories: 135, protein: 30, carbs: 0, fat: 1, per: 100 },
+            'ground turkey': { calories: 170, protein: 28, carbs: 0, fat: 7, per: 100 },
             'pork chop': { calories: 231, protein: 23, carbs: 0, fat: 15, per: 100 },
+            'pork': { calories: 242, protein: 27, carbs: 0, fat: 14, per: 100 },
+            'bacon': { calories: 541, protein: 37, carbs: 1.4, fat: 42, per: 100 },
+            'ham': { calories: 145, protein: 21, carbs: 1.5, fat: 6, per: 100 },
+            'shrimp': { calories: 99, protein: 24, carbs: 0.2, fat: 0.3, per: 100 },
+            'cod': { calories: 82, protein: 18, carbs: 0, fat: 0.7, per: 100 },
+            'tilapia': { calories: 96, protein: 20, carbs: 0, fat: 1.7, per: 100 },
 
             // Carbs
             'rice': { calories: 130, protein: 2.7, carbs: 28, fat: 0.3, per: 100 },
@@ -178,11 +192,13 @@ class HealthTracker {
             'brown rice': { calories: 111, protein: 2.6, carbs: 23, fat: 0.9, per: 100 },
             'pasta': { calories: 131, protein: 5, carbs: 25, fat: 1.1, per: 100 },
             'bread': { calories: 265, protein: 9, carbs: 49, fat: 3.2, per: 100 },
+            'whole wheat bread': { calories: 247, protein: 13, carbs: 41, fat: 3.4, per: 100 },
             'oats': { calories: 389, protein: 17, carbs: 66, fat: 7, per: 100 },
             'oatmeal': { calories: 389, protein: 17, carbs: 66, fat: 7, per: 100 },
             'quinoa': { calories: 120, protein: 4.4, carbs: 21, fat: 1.9, per: 100 },
             'potato': { calories: 77, protein: 2, carbs: 17, fat: 0.1, per: 100 },
             'sweet potato': { calories: 86, protein: 1.6, carbs: 20, fat: 0.1, per: 100 },
+            'tortilla': { calories: 218, protein: 6, carbs: 36, fat: 5, per: 100 },
 
             // Fruits
             'banana': { calories: 89, protein: 1.1, carbs: 23, fat: 0.3, per: 'item' },
@@ -190,27 +206,43 @@ class HealthTracker {
             'orange': { calories: 47, protein: 0.9, carbs: 12, fat: 0.1, per: 'item' },
             'strawberries': { calories: 32, protein: 0.7, carbs: 8, fat: 0.3, per: 100 },
             'blueberries': { calories: 57, protein: 0.7, carbs: 14, fat: 0.3, per: 100 },
+            'grapes': { calories: 69, protein: 0.7, carbs: 18, fat: 0.2, per: 100 },
+            'watermelon': { calories: 30, protein: 0.6, carbs: 8, fat: 0.2, per: 100 },
 
             // Vegetables
             'broccoli': { calories: 34, protein: 2.8, carbs: 7, fat: 0.4, per: 100 },
             'spinach': { calories: 23, protein: 2.9, carbs: 3.6, fat: 0.4, per: 100 },
             'carrots': { calories: 41, protein: 0.9, carbs: 10, fat: 0.2, per: 100 },
             'tomato': { calories: 18, protein: 0.9, carbs: 3.9, fat: 0.2, per: 100 },
+            'lettuce': { calories: 15, protein: 1.4, carbs: 2.9, fat: 0.2, per: 100 },
+            'cucumber': { calories: 16, protein: 0.7, carbs: 3.6, fat: 0.1, per: 100 },
+            'bell pepper': { calories: 31, protein: 1, carbs: 6, fat: 0.3, per: 100 },
 
             // Fats/Nuts
             'almonds': { calories: 579, protein: 21, carbs: 22, fat: 50, per: 100 },
+            'peanuts': { calories: 567, protein: 26, carbs: 16, fat: 49, per: 100 },
+            'cashews': { calories: 553, protein: 18, carbs: 30, fat: 44, per: 100 },
+            'walnuts': { calories: 654, protein: 15, carbs: 14, fat: 65, per: 100 },
             'peanut butter': { calories: 588, protein: 25, carbs: 20, fat: 50, per: 100 },
+            'almond butter': { calories: 614, protein: 21, carbs: 18, fat: 56, per: 100 },
             'avocado': { calories: 160, protein: 2, carbs: 9, fat: 15, per: 100 },
             'olive oil': { calories: 884, protein: 0, carbs: 0, fat: 100, per: 100 },
+            'butter': { calories: 717, protein: 0.9, carbs: 0.1, fat: 81, per: 100 },
 
             // Dairy
             'milk': { calories: 42, protein: 3.4, carbs: 5, fat: 1, per: 100 },
+            'whole milk': { calories: 61, protein: 3.2, carbs: 4.8, fat: 3.3, per: 100 },
+            'skim milk': { calories: 34, protein: 3.4, carbs: 5, fat: 0.1, per: 100 },
             'cheese': { calories: 402, protein: 25, carbs: 1.3, fat: 33, per: 100 },
             'cheddar cheese': { calories: 402, protein: 25, carbs: 1.3, fat: 33, per: 100 },
+            'mozzarella': { calories: 280, protein: 28, carbs: 3.1, fat: 17, per: 100 },
+            'cottage cheese': { calories: 98, protein: 11, carbs: 3.4, fat: 4.3, per: 100 },
+            'yogurt': { calories: 59, protein: 3.5, carbs: 4.7, fat: 3.3, per: 100 },
 
             // Common meals
             'protein shake': { calories: 120, protein: 24, carbs: 3, fat: 1.5, per: 'item' },
             'pizza': { calories: 266, protein: 11, carbs: 33, fat: 10, per: 100 },
+            'burger': { calories: 295, protein: 17, carbs: 14, fat: 14, per: 100 },
         };
 
         // Normalize food name
@@ -390,6 +422,17 @@ class HealthTracker {
     renderTodayView() {
         const entries = this.data.foodEntries[this.currentDate] || [];
 
+        // Show/hide weight section based on whether weight is already logged today
+        const today = new Date().toISOString().split('T')[0];
+        const weightSection = document.querySelector('.weight-section');
+        if (this.currentDate === today && this.data.weightEntries[today]) {
+            weightSection.style.display = 'none';
+        } else if (this.currentDate === today) {
+            weightSection.style.display = 'flex';
+        } else {
+            weightSection.style.display = 'none';
+        }
+
         // Calculate totals
         const totals = entries.reduce((acc, entry) => {
             acc.calories += entry.calories;
@@ -492,24 +535,148 @@ class HealthTracker {
     }
 
     renderSimpleCharts() {
-        // Simple text-based charts for now
         const weightCanvas = document.getElementById('weightChart');
         const calorieCanvas = document.getElementById('calorieChart');
 
-        // We'll add proper chart rendering later or use a lightweight library
         const ctx1 = weightCanvas.getContext('2d');
         const ctx2 = calorieCanvas.getContext('2d');
+
+        // Set canvas size
+        weightCanvas.width = weightCanvas.offsetWidth;
+        weightCanvas.height = 200;
+        calorieCanvas.width = calorieCanvas.offsetWidth;
+        calorieCanvas.height = 200;
 
         // Clear canvases
         ctx1.clearRect(0, 0, weightCanvas.width, weightCanvas.height);
         ctx2.clearRect(0, 0, calorieCanvas.width, calorieCanvas.height);
 
-        // Simple placeholder text
-        ctx1.font = '14px Arial';
-        ctx1.fillText('Weight trend chart - coming soon', 10, 50);
+        // Render weight chart
+        this.renderWeightChart(ctx1, weightCanvas.width, weightCanvas.height);
 
-        ctx2.font = '14px Arial';
-        ctx2.fillText('Calorie trend chart - coming soon', 10, 50);
+        // Render calorie chart
+        this.renderCalorieChart(ctx2, calorieCanvas.width, calorieCanvas.height);
+    }
+
+    renderWeightChart(ctx, width, height) {
+        const last30Days = this.getLast30Days();
+        const weightData = last30Days.map(date => {
+            const entry = this.data.weightEntries[date];
+            return entry ? entry.weight : null;
+        }).filter(w => w !== null);
+
+        if (weightData.length === 0) {
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#999';
+            ctx.fillText('No weight data yet', 10, height / 2);
+            return;
+        }
+
+        // Draw simple line chart
+        const padding = 40;
+        const chartWidth = width - 2 * padding;
+        const chartHeight = height - 2 * padding;
+
+        const minWeight = Math.min(...weightData) - 5;
+        const maxWeight = Math.max(...weightData) + 5;
+        const weightRange = maxWeight - minWeight;
+
+        ctx.strokeStyle = '#4CAF50';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        weightData.forEach((weight, i) => {
+            const x = padding + (i / Math.max(weightData.length - 1, 1)) * chartWidth;
+            const y = height - padding - ((weight - minWeight) / weightRange) * chartHeight;
+
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+
+            // Draw point
+            ctx.fillStyle = '#4CAF50';
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+
+        ctx.stroke();
+
+        // Draw axes
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, padding);
+        ctx.lineTo(padding, height - padding);
+        ctx.lineTo(width - padding, height - padding);
+        ctx.stroke();
+
+        // Labels
+        ctx.fillStyle = '#666';
+        ctx.font = '12px Arial';
+        ctx.fillText(`${Math.round(minWeight)} lbs`, 5, height - padding);
+        ctx.fillText(`${Math.round(maxWeight)} lbs`, 5, padding);
+    }
+
+    renderCalorieChart(ctx, width, height) {
+        const last7Days = this.getLast7Days();
+        const calorieData = last7Days.map(date => {
+            const entries = this.data.foodEntries[date] || [];
+            return entries.reduce((sum, e) => sum + e.calories, 0);
+        });
+
+        const hasData = calorieData.some(c => c > 0);
+        if (!hasData) {
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#999';
+            ctx.fillText('No calorie data yet', 10, height / 2);
+            return;
+        }
+
+        // Draw simple bar chart
+        const padding = 40;
+        const chartWidth = width - 2 * padding;
+        const chartHeight = height - 2 * padding;
+
+        const maxCalories = Math.max(...calorieData, this.settings.calorieGoal);
+        const barWidth = chartWidth / 7 - 5;
+
+        calorieData.forEach((calories, i) => {
+            const x = padding + i * (chartWidth / 7);
+            const barHeight = (calories / maxCalories) * chartHeight;
+            const y = height - padding - barHeight;
+
+            ctx.fillStyle = calories > this.settings.calorieGoal ? '#f44336' : '#2196F3';
+            ctx.fillRect(x, y, barWidth, barHeight);
+        });
+
+        // Draw goal line
+        ctx.strokeStyle = '#FF9800';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        const goalY = height - padding - (this.settings.calorieGoal / maxCalories) * chartHeight;
+        ctx.beginPath();
+        ctx.moveTo(padding, goalY);
+        ctx.lineTo(width - padding, goalY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw axes
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, padding);
+        ctx.lineTo(padding, height - padding);
+        ctx.lineTo(width - padding, height - padding);
+        ctx.stroke();
+
+        // Labels
+        ctx.fillStyle = '#666';
+        ctx.font = '12px Arial';
+        ctx.fillText('0', 5, height - padding);
+        ctx.fillText(`${Math.round(maxCalories)}`, 5, padding);
     }
 
     renderSettingsView() {
