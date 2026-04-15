@@ -5,15 +5,19 @@ A lightweight, privacy-focused health tracking web app optimized for iPhone. Tra
 ## Features
 
 - **Quick Food Entry**: Type "chicken breast 220g" and hit enter - that's it!
+- **Barcode Scanner**: Scan product barcodes to automatically lookup nutrition information
 - **External Food Database**: Searches USDA FoodData Central with 300,000+ foods
 - **Smart Food Matching**: Shows multiple options when there are similar foods
+- **Advanced Food Parsing**: Supports lean meat percentages (e.g., "ground beef 88/12")
 - **Automatic Calorie Calculation**: Accurate nutrition data from comprehensive database
 - **Offline Fallback**: Built-in food database for when API is unavailable
 - **Macro Tracking**: Track protein, carbs, and fat
 - **Edit Food Entries**: Modify calories and macros for any logged food
-- **Weight Tracking**: Log your daily weight
+- **Weight Tracking**: Log your daily weight (auto-hides after logging)
 - **Goal Setting**: Set daily calorie and macro goals
-- **Trends & Analytics**: View your progress over time
+- **Trends & Analytics**: View your progress over time with interactive charts
+- **Smart UI**: Weight logging section hides after entry for cleaner interface
+- **Single Point Charts**: Charts display properly even with just one data point
 - **100% Private**: All data stored locally on your device
 - **Offline Support**: Works without internet (PWA)
 - **iPhone Optimized**: Designed for mobile-first experience
@@ -188,8 +192,6 @@ This is a Progressive Web App (PWA), which means you can install it on your iPho
 
 Potential features to add:
 - [ ] AI-powered food parsing using Claude API
-- [ ] USDA FoodData Central API integration for comprehensive food database
-- [ ] Barcode scanning
 - [ ] Photo-based food logging
 - [ ] Meal templates/favorites
 - [ ] Custom foods
