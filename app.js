@@ -107,6 +107,7 @@ class HealthTracker {
         document.getElementById('darkModeToggle').addEventListener('change', (e) => {
             this.settings.darkMode = e.target.checked;
             this.applyTheme();
+            this.saveSettings();  // Persist the setting
         });
         document.getElementById('goalTypeSelect').addEventListener('change', (e) => {
             this.toggleGoalInputs(e.target.value);
@@ -146,7 +147,7 @@ class HealthTracker {
                     <h3>Scan Barcode</h3>
                     <video id="scannerVideo" autoplay playsinline muted></video>
                     <canvas id="scannerCanvas" style="display:none;"></canvas>
-                    <p class="scanner-instructions">Position barcode in the center</p>
+                    <p class="scanner-instructions" id="scannerStatus">Position barcode in the center</p>
                     <button class="btn-cancel" onclick="app.closeBarcodeScanner()">Cancel</button>
                 </div>
             `;
@@ -212,6 +213,12 @@ class HealthTracker {
     startZXingScanning(video, canvas) {
         const codeReader = new ZXing.BrowserMultiFormatReader();
         const ctx = canvas.getContext('2d');
+        let scanCount = 0;
+
+        const updateStatus = (message) => {
+            const statusEl = document.getElementById('scannerStatus');
+            if (statusEl) statusEl.textContent = message;
+        };
 
         const scanFrame = () => {
             if (!this.barcodeStream) return;
@@ -225,21 +232,44 @@ class HealthTracker {
                     // Draw current video frame to canvas
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                    // Try to decode barcode from canvas
-                    const result = codeReader.decodeFromCanvas(canvas);
+                    // Update status every 10 scans
+                    scanCount++;
+                    if (scanCount % 10 === 0) {
+                        updateStatus(`Scanning... (${scanCount} attempts)`);
+                    }
 
-                    if (result) {
-                        const barcode = result.text;
-                        this.closeBarcodeScanner();
-                        this.lookupBarcode(barcode);
-                        return;
+                    // Try to decode barcode from canvas using multiple methods
+                    try {
+                        const result = codeReader.decodeFromCanvas(canvas);
+                        if (result && result.text) {
+                            updateStatus(`Found barcode: ${result.text}`);
+                            this.closeBarcodeScanner();
+                            this.lookupBarcode(result.text);
+                            return;
+                        }
+                    } catch (decodeErr) {
+                        // Try alternative: decode from image data
+                        try {
+                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                            const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+                            const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+                            const result = codeReader.decode(binaryBitmap);
+                            if (result && result.text) {
+                                updateStatus(`Found barcode: ${result.text}`);
+                                this.closeBarcodeScanner();
+                                this.lookupBarcode(result.text);
+                                return;
+                            }
+                        } catch (err2) {
+                            // No barcode found, continue
+                        }
                     }
                 }
             } catch (err) {
-                // No barcode found in this frame, continue scanning
+                console.error('Scan frame error:', err);
             }
 
-            // Continue scanning at 10 FPS to reduce CPU usage
+            // Continue scanning at ~10 FPS to reduce CPU usage
             if (this.barcodeStream) {
                 setTimeout(() => requestAnimationFrame(scanFrame), 100);
             }
@@ -247,11 +277,13 @@ class HealthTracker {
 
         // Wait for video to be ready
         video.addEventListener('loadedmetadata', () => {
+            updateStatus('Camera ready, scanning...');
             setTimeout(() => scanFrame(), 500);
         });
 
         // Start immediately if video is already loaded
         if (video.readyState >= video.HAVE_METADATA) {
+            updateStatus('Camera ready, scanning...');
             setTimeout(() => scanFrame(), 500);
         }
     }
