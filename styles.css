@@ -37,7 +37,7 @@ body {
     color: var(--text-primary);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    padding-bottom: 80px;
+    padding-bottom: 70px;
 }
 
 .app-container {
@@ -544,16 +544,84 @@ canvas {
     .app-container {
         max-width: 100%;
     }
+
+    /* Compact header on mobile */
+    .header {
+        padding: 12px 16px;
+    }
+
+    .header h1 {
+        font-size: 22px;
+        margin-bottom: 4px;
+    }
+
+    .date-selector {
+        gap: 12px;
+        margin-top: 4px;
+    }
+
+    .date-nav {
+        font-size: 20px;
+        padding: 6px;
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    #currentDate {
+        font-size: 15px;
+    }
+
+    /* Compact bottom navigation on mobile */
+    .bottom-nav {
+        padding: 6px 4px;
+    }
+
+    .nav-btn {
+        padding: 6px 12px;
+        gap: 2px;
+    }
+
+    .nav-icon {
+        font-size: 22px;
+    }
+
+    .nav-label {
+        font-size: 11px;
+    }
+
+    /* Reduce body padding for smaller footer */
+    body {
+        padding-bottom: 60px;
+    }
+
+    /* Tighter spacing for content sections */
+    .quick-input,
+    .weight-section,
+    .daily-summary {
+        margin: 12px;
+        padding: 12px;
+    }
+
+    .view-section {
+        padding: 16px;
+        margin: 0 12px 12px;
+    }
 }
 
 /* Safe area insets for iPhone notch */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
     body {
-        padding-bottom: env(safe-area-inset-bottom);
+        padding-bottom: calc(70px + env(safe-area-inset-bottom));
+    }
+
+    @media (max-width: 600px) {
+        body {
+            padding-bottom: calc(60px + env(safe-area-inset-bottom));
+        }
     }
 
     .bottom-nav {
-        padding-bottom: calc(8px + env(safe-area-inset-bottom));
+        padding-bottom: calc(6px + env(safe-area-inset-bottom));
     }
 }
 
